@@ -4,11 +4,14 @@
 '''
 import numpy as np
 import cv2
-import utility
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+import utils
 
 cap=cv2.VideoCapture(1)
-utility.set_cap_resolution(cap,234)
-target=cv2.imread('image_detecting/template.png',cv2.IMREAD_GRAYSCALE)
+utils.set_cap_resolution(cap,234)
+target=cv2.imread('image_detecting/trials/template.png',cv2.IMREAD_GRAYSCALE)
 
 while cap.isOpened():
     _,img=cap.read()
@@ -30,6 +33,7 @@ while cap.isOpened():
             match=cv2.matchShapes(contour,target_contour[0],cv2.CONTOURS_MATCH_I3,0)
             if match<0.1:
                 cv2.putText(img,f'{match}',tuple(contour[0][0]),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),1)
+                cv2.drawContours(img,[contour],0,(0,255,0),2)
     
     cv2.imshow('img',img)
     if cv2.waitKey(1) & 0xFF ==ord('q'):
