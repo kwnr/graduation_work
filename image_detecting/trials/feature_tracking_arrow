@@ -5,36 +5,43 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import utils
 
+morph_method=cv2.MORPH_CLOSE
+
 cap=cv2.VideoCapture(1)
-
-target=cv2.imread('/Users/hyeokbeom/Desktop/graduation_work/image_detecting/trials/template_arrow.png',cv2.IMREAD_GRAYSCALE)
-
 orb=cv2.ORB_create()
 
-target_key, target_desc=orb.detectAndCompute(target,None)
+target=cv2.imread('/Users/hyeokbeom/Desktop/graduation_work/image_detecting/trials/template_arrow.png',cv2.IMREAD_GRAYSCALE)
+#treating target
+target_treated=cv2.resize(target,None,None,0.4,0.4)
+k=cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
+target_treated=cv2.adaptiveThreshold(target,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,9,5)
+
+target_key, target_desc=orb.detectAndCompute(target_treated,None)
 target_draw=cv2.drawKeypoints(target,target_key,None,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
 while cap.isOpened():
     _,img=cap.read()
     
     img_gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    _,img_bin=cv2.threshold(img_gray,-1,255,cv2.THRESH_OTSU)
     
+    #treating capture image
+    img_treated=cv2.adaptiveThreshold(img_gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,9,5)
+    img_treated=cv2.dilate(img_treated,k)
     
-    img_key,img_desc=orb.detectAndCompute(img_bin,None)
+    img_key,img_desc=orb.detectAndCompute(img_treated,None)
     
-    matcher=cv2.BFMatcher(cv2.NORM_HAMMING2)
-    matches=matcher.knnMatch(img_desc,target_desc,2)
+    img=cv2.drawKeypoints(img,img_key,None,flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT)
     
-    ratio=0.75
-    good_matches=[first for first,second in matches if first.distance < (second.distance*ratio)]
+    matcher=cv2.BFMatcher(cv2.NORM_HAMMING2, crossCheck=True)
+    matches=matcher.match(img_desc,target_desc)
+    matches=sorted(matches,key= lambda x:x.distance)
     
-    
-    res=cv2.drawMatches(img,img_key,target,target_key,good_matches,None,flags=cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
+        
+    res=cv2.drawMatches(img_treated,img_key,target_treated,target_key,matches,None,flags=cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
     
     
     cv2.imshow('result', res)
-    cv2.imshow('A',target_draw)
+
     if cv2.waitKey(1) & 0xFF ==ord('q'):
         break
     

@@ -15,10 +15,11 @@ def setLabel(img, pts, label):
 cap=cv2.VideoCapture(1)
 frame_rate=10
 prev=0
+cap.set(cv2.CAP_PROP_FPS,frame_rate)
     
 while cap.isOpened():
     time_elapsed = time.time() - prev   #10FPS로 제한
-    res, image = cap.read()             #
+    res, image = cap.read()             
 
     if time_elapsed > 1./frame_rate:
         prev = time.time()
