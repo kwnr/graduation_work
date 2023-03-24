@@ -10,11 +10,16 @@ def setLabel(img, pts, label):
     cv2.rectangle(img, pt1, pt2, (0, 0, 255), 1)
     cv2.putText(img, label, pt1, cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
     
-
+    
 cap=cv2.VideoCapture(1)
 frame_rate=10
 prev=0
-    
+
+w=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+h=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+canv=np.zeros([w,h])
+
 while cap.isOpened():
     time_elapsed = time.time() - prev   #10FPS로 제한
     res, image = cap.read()             #
@@ -25,31 +30,45 @@ while cap.isOpened():
     status, img=cap.read()
     
     img_gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(img_gray, 0, 255,cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-    contours,hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    img_gauss=cv2.GaussianBlur(img_gray,(5,5),0)
+    img_canny=cv2.Canny(img_gauss,75,255)
+    a=np.hstack((img_canny,img_gauss))
+    hough_lines=cv2.HoughLinesP(img_canny,1,np.pi/90,5)
+    img_hough_lines=np.zeros_like(img_gray,dtype=np.uint8)
     
-    for i in range(len(contours)):
-        if cv2.contourArea(contours[i]) < 400: # 노이즈 제거, 너무 작으면 무시
-            continue
-        eps=cv2.arcLength(contours[i],True)
-        approx=cv2.approxPolyDP(contours[i],epsilon=eps*0.03,closed=True)
-        vtc=len(approx)
-        if vtc==7:
-            M=cv2.moments(contours[i])  #꼭짓점이 12개인 폐곡선 컨투어의 이미지 모멘트 계산
-            cx=int(M['m10']/M['m00'])   #폐곡선의 중심 계산
-            cy=int(M['m01']/M['m00'])
-            cv2.circle(img,(cx,cy),1,(0,0,255),2) 
-            cv2.drawContours(img, [contours[i]], 0, (0,0,255), 2)
-            cv2.putText(img, f'AREA: {cv2.contourArea(contours[i])}, COORD: ({cx}, {cy})', tuple(contours[i][0][0]),cv2.FONT_HERSHEY_COMPLEX,0.8,(0,0,0),2)
-            rect=cv2.minAreaRect(contours[i])   #십자를 감싸는 최소 넓이 사각형, https://docs.opencv.org/4.3.0/dd/d49/tutorial_py_contour_features.html 참조
-            box=cv2.boxPoints(rect)
-            box=np.intp(box)
-            cv2.drawContours(img,[box],0,(255,0,0),2)
+    if hough_lines is not None:
+        for i in range(0, len(hough_lines)):
+            l = hough_lines[i][0]
+            cv2.line(img_hough_lines, (l[0], l[1]), (l[2], l[3]), 255, 3, cv2.LINE_AA)
+        
+        contours,hierarchy = cv2.findContours(img_hough_lines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+                
+        for i in range(len(contours)):
+            if cv2.contourArea(contours[i]) < 400: # 노이즈 제거, 너무 작으면 무시
+                continue
+            if np.count_nonzero(np.sum([contours[i]==0,contours[i]==h-1 , contours[i]==w-1]))!=0:
+                continue
+            eps=cv2.arcLength(contours[i],True)
             
-    cv2.imshow('img',img)
+            approx=cv2.approxPolyDP(contours[i],epsilon=eps*0.01,closed=True)
+            vtc=len(approx)
+            if vtc==7:
+                hull=cv2.convexHull(approx,returnPoints=False)
+                if hull is not None:
+                    defects=cv2.convexityDefects(approx,hull)
+                    
+                    if defects is not None:
+                        if len(defects)==2:
+                            cv2.drawContours(img,[approx],0,(0,0,255),3)
+                
+        
+    a=cv2.cvtColor(a,cv2.COLOR_GRAY2BGR)
+    b=np.hstack((cv2.cvtColor(img_hough_lines,cv2.COLOR_GRAY2BGR),img))
+    merged=np.vstack((a,b))
+    cv2.imshow('img',merged)
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        cv2.imwrite("a.png",img)
         break    
 
 cap.release()
 cv2.destroyAllWindows()
+ 
