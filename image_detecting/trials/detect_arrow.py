@@ -2,9 +2,7 @@ import cv2
 import numpy as np
 import time
 import shapely
-
-
-
+from scipy.spatial.transform import Rotation as R
 
 
 def setLabel(img, pts, label):
@@ -30,7 +28,6 @@ def detect_contours(img_bin):
         img_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
     )
     return contours, hierarchy
-
 
 
 def detect_approxs(contours):
@@ -59,16 +56,19 @@ def detect_approxs(contours):
 
 
 def find_arrow_like(approxes: dict, hierarchies):
-    arrow_like_index = []
-    points_ls = []
+    arrow_like = {}
+    points_ls = {}
+    parents_approx = {}
     for i in approxes.keys():
         approx = approxes[i]
-        hierarchy=hierarchies[i]
-        parent=hierarchy[3]
-        if len(approx)==7:
+        hierarchy = hierarchies[0][i]
+        parent = hierarchy[3]
+        if len(approx) == 7:
             if parent != -1:
-                parent_approx=approxes[parent]
-                if len(parent_approx)==4:
+                if parent not in approxes.keys():
+                    continue
+                parent_approx = approxes[parent]
+                if len(parent_approx) == 4:
                     hull = cv2.convexHull(approx, returnPoints=False)
                     if hull is not None:
                         try:
@@ -78,18 +78,28 @@ def find_arrow_like(approxes: dict, hierarchies):
                             continue
                         if defects is not None:
                             if len(defects) == 2:
-                                points = np.array([defects[0][0][:2], defects[1][0][:2]])
+                                points = np.array(
+                                    [defects[0][0][:2], defects[1][0][:2]]
+                                )
                                 if not ((points[:, 0] - points[:, 1]) % 7 == 5).all():
                                     continue
-                                if points[0, 1] == points[1, 0] or points[0, 0] == points[1, 1]:
+                                if (
+                                    points[0, 1] == points[1, 0]
+                                    or points[0, 0] == points[1, 1]
+                                ):
                                     continue
-                                arrow_like_index.append(i)
-                                points_ls.append(points)
-    return arrow_like_index, points_ls
+                                arrow_like[i] = approx
+                                points_ls[i] = points
+                                parents_approx[i] = parent_approx
+    return arrow_like, points_ls, parents_approx
 
-def find_angle_vector(v1,v2):
-    theta=np.arccos(np.dot(v1,v2)/(np.sqrt(np.sum(np.square(v1)))*np.sqrt(np.sum(np.square(v2)))))
-    theta=np.rad2deg(theta)
+
+def find_angle_vector(v1, v2):
+    theta = np.arccos(
+        np.dot(v1, v2)
+        / (np.sqrt(np.sum(np.square(v1))) * np.sqrt(np.sum(np.square(v2))))
+    )
+    theta = np.rad2deg(theta)
     return theta
 
 
@@ -112,7 +122,7 @@ def find_arrow_like_properties(approx, contour, points):
     head_distance = np.linalg.norm(
         np.cross(left - right, right - head)
     ) / np.linalg.norm(left - right)
-    intersection=line_intersection([head,center],[right,left])
+    intersection = line_intersection([head, center], [right, left])
     properties = {
         "M": M,
         "center": center,
@@ -122,7 +132,7 @@ def find_arrow_like_properties(approx, contour, points):
         "right_distance": right_distance,
         "left_distance": left_distance,
         "head_distance": head_distance,
-        "intersection":intersection
+        "intersection": intersection,
     }
     return properties
 
@@ -155,7 +165,7 @@ def draw(img, approx, properties):
 
 def detect_arrow(img):
     """detect arrows in input image.
-    
+
     Args:
         img : input image
 
@@ -166,22 +176,30 @@ def detect_arrow(img):
     img_bin = preprocessing(img)
     contours, hierarchy = detect_contours(img_bin)
     approxes = detect_approxs(contours)
-    arrow_like_index_ls, points_ls = find_arrow_like(approxes, hierarchy)
-    for i in range(len(arrow_like_index_ls)):
-        approx = approxes[arrow_like_index_ls[i]]
-        contour = contours[arrow_like_index_ls[i]]
-        points = points_ls[i]
-        properties = find_arrow_like_properties(approx, contour, points)
+    arrow_like, points_ls, parents = find_arrow_like(approxes, hierarchy)
+    for i in arrow_like.keys():
+        properties = find_arrow_like_properties(
+            arrow_like[i], contours[i], points_ls[i]
+        )
+        properties["contour"] = contours[i]
+        properties["approx"] = arrow_like[i]
+        properties["parent"] = parents[i]
         if (
             abs(properties["left_distance"] - properties["right_distance"])
             / max(properties["left_distance"], properties["right_distance"])
             < 0.2
         ):
-            if cv2.pointPolygonTest(contour,properties['intersection'],False)==1:
+            if (
+                cv2.pointPolygonTest(contours[i], properties["intersection"], False)
+                == 1
+            ):
                 arrows.append(properties)
     return arrows
 
-def line_intersection(line1, line2): #from https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
+
+def line_intersection(
+    line1, line2
+):  # from https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
 
@@ -190,18 +208,21 @@ def line_intersection(line1, line2): #from https://stackoverflow.com/questions/2
 
     div = det(xdiff, ydiff)
     if div == 0:
-       raise Exception('lines do not intersect')
+        raise Exception("lines do not intersect")
 
     d = (det(*line1), det(*line2))
     x = det(d, xdiff) / div
     y = det(d, ydiff) / div
     return int(x), int(y)
 
+
 if __name__ == "__main__":
     cap = cv2.VideoCapture(1)
     frame_rate = 1
     prev_time = 0
     cap.set(cv2.CAP_PROP_FPS, 5)
+    h = 1267
+    w = 771
 
     while cap.isOpened():
         curr_time = time.time()
@@ -209,27 +230,42 @@ if __name__ == "__main__":
         status, img = cap.read()
         fps = 1 / term
         prev_time = curr_time
-        img_bin = preprocessing(img)
-        contours = detect_contours(img_bin)
-        approxes = detect_approxs(contours)
-        arrow_like_index_ls, points_ls = find_arrow_like(approxes)
-        for i in range(len(arrow_like_index_ls)):
-            approx = approxes[arrow_like_index_ls[i]]
-            contour = contours[arrow_like_index_ls[i]]
-            points = points_ls[i]
-            properties = find_arrow_like_properties(approx, contour, points)
-            if (
-                abs(properties["left_distance"] - properties["right_distance"])
-                / max(properties["left_distance"], properties["right_distance"])
-                < 0.2
-            ):
-                img = draw(img, approx, properties)
-                x,y=line_intersection([properties["head"],properties["center"]],[properties["right"],properties['left']])
-                cv2.circle(img,[x,y],5,(0,255,0),3)
-                cv2.line(img,[x,y],properties["head"],(0,255,0),3)
-                cv2.line(img,[x,y],properties["right"],(0,255,0),3)
-                cv2.putText(img,f'{find_angle_vector(properties["head"]-properties["center"],properties["right"]-properties["left"]):.2f}',[x,y],cv2.FONT_HERSHEY_SIMPLEX,2,(0,255,0),3)
-                cv2.putText(img,f"{properties['head_distance']/properties['right_distance']:.2f}",properties['head'],cv2.FONT_HERSHEY_SIMPLEX,2,(255,0,0),3)
+        arrows = detect_arrow(img)
+        for arrow in arrows:
+            cv2.circle(img, arrow["center"], 5, (0, 255, 0), 3)
+            cv2.drawContours(
+                img, [arrow["contour"], arrow["parent"]], -1, (0, 0, 255), 3
+            )
+            distance = [
+                np.sqrt(np.sum(np.square(arrow["parent"][i][0] - arrow["left"])))
+                for i in range(4)
+            ]
+            tl = np.argmin(distance) - 1
+            mtrx = cv2.getPerspectiveTransform(
+                np.float32(
+                    [
+                        arrow["parent"][tl % 4, 0, :],
+                        arrow["parent"][(tl + 1) % 4, 0, :],
+                        arrow["parent"][(tl + 2) % 4, 0, :],
+                        arrow["parent"][(tl + 3) % 4, 0, :],
+                    ]
+                ),
+                np.float32([[0, 0], [w, 0], [w, h], [0, h]]),
+            )
+            rtv = cv2.warpPerspective(img, mtrx, (w, h))
+            cv2.imshow("warp", rtv)
+            r = R.from_matrix(mtrx)
+            euler = r.as_euler("zxy",degrees=True)
+            cv2.putText(
+                img,
+                f"x:{euler[0]:.0f} y:{euler[1]:.0f} z:{euler[2]:.0f}",
+                arrow["parent"][0][0],
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                3,
+            )
+
         cv2.putText(
             img, f"{fps:.2f}", [10, 50], cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3
         )
