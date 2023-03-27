@@ -4,22 +4,7 @@ import time
 import shapely
 
 
-def get_heading(head, center):
-    hx, hy = head
-    cx, cy = center
-    if hy - cy == 0:
-        if hx > cx:
-            heading = np.pi
-        else:
-            heading = -np.pi
-    else:
-        heading = np.arctan(np.divide(hx - cx, hy - cy))
-        if hy > cy:
-            if hx < cx:
-                heading = heading + np.pi
-            else:
-                heading = heading - np.pi
-    return np.rad2deg(heading)
+
 
 
 def setLabel(img, pts, label):
@@ -99,6 +84,11 @@ def find_arrow_like(approxes: dict):
                     points_ls.append(points)
     return arrow_like_index, points_ls
 
+def find_angle_vector(v1,v2):
+    theta=np.arccos(np.dot(v1,v2)/(np.sqrt(np.sum(np.square(v1)))*np.sqrt(np.sum(np.square(v2)))))
+    theta=np.rad2deg(theta)
+    return theta
+
 
 def find_arrow_like_properties(approx, contour, points):
     M = cv2.moments(contour)
@@ -119,6 +109,7 @@ def find_arrow_like_properties(approx, contour, points):
     head_distance = np.linalg.norm(
         np.cross(left - right, right - head)
     ) / np.linalg.norm(left - right)
+    intersection=line_intersection([head,center],[right,left])
     properties = {
         "M": M,
         "center": center,
@@ -128,6 +119,7 @@ def find_arrow_like_properties(approx, contour, points):
         "right_distance": right_distance,
         "left_distance": left_distance,
         "head_distance": head_distance,
+        "intersection":intersection
     }
     return properties
 
@@ -145,7 +137,7 @@ def draw(img, approx, properties):
     cv2.circle(img, properties["center"], 3, (0, 0, 255))
     for pos in ["head", "left", "right"]:
         cv2.circle(img, properties[pos], 5, (255, 0, 0), 3)
-    for pos in ["left", "right"]:
+    """for pos in ["left", "right"]:
         cv2.putText(
             img,
             f"{properties[f'{pos}_distance']:.2f}",
@@ -154,7 +146,7 @@ def draw(img, approx, properties):
             2,
             (0, 255, 0),
             3,
-        )
+        )"""
     return img
 
 
@@ -182,11 +174,25 @@ def detect_arrow(img):
             / max(properties["left_distance"], properties["right_distance"])
             < 0.2
         ):
-            arrows.append(
-                {"approx": approx, "contour": contour, "properties": properties}
-            )
+            if cv2.pointPolygonTest(contour,properties['intersection'],False)==1:
+                arrows.append(properties)
     return arrows
 
+def line_intersection(line1, line2): #from https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
+    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+
+    def det(a, b):
+        return a[0] * b[1] - a[1] * b[0]
+
+    div = det(xdiff, ydiff)
+    if div == 0:
+       raise Exception('lines do not intersect')
+
+    d = (det(*line1), det(*line2))
+    x = det(d, xdiff) / div
+    y = det(d, ydiff) / div
+    return int(x), int(y)
 
 if __name__ == "__main__":
     cap = cv2.VideoCapture(1)
@@ -215,6 +221,12 @@ if __name__ == "__main__":
                 < 0.2
             ):
                 img = draw(img, approx, properties)
+                x,y=line_intersection([properties["head"],properties["center"]],[properties["right"],properties['left']])
+                cv2.circle(img,[x,y],5,(0,255,0),3)
+                cv2.line(img,[x,y],properties["head"],(0,255,0),3)
+                cv2.line(img,[x,y],properties["right"],(0,255,0),3)
+                cv2.putText(img,f'{find_angle_vector(properties["head"]-properties["center"],properties["right"]-properties["left"]):.2f}',[x,y],cv2.FONT_HERSHEY_SIMPLEX,2,(0,255,0),3)
+                cv2.putText(img,f"{properties['head_distance']/properties['right_distance']:.2f}",properties['head'],cv2.FONT_HERSHEY_SIMPLEX,2,(255,0,0),3)
         cv2.putText(
             img, f"{fps:.2f}", [10, 50], cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3
         )
