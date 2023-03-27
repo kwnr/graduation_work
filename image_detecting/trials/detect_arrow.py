@@ -25,17 +25,15 @@ def preprocessing(img):
     return img_bin
 
 
-def detect_contours(img_bin, return_hierarchy=False):
+def detect_contours(img_bin):
     contours, hierarchy = cv2.findContours(
-        img_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+        img_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
     )
-    if return_hierarchy:
-        return contours, hierarchy
-    else:
-        return contours
+    return contours, hierarchy
 
 
-def detect_approxs(contours, vtc=7):
+
+def detect_approxs(contours):
     """detects approximated contours using cv2.approxPolyDP from input binary image.
     returns approxed contours.
 
@@ -56,32 +54,37 @@ def detect_approxs(contours, vtc=7):
         # cv2.drawContours(img,[approx],0,(255,0,0),3)
 
         # cv2.putText(img,f'vtc:{vtc}',approx[0][0],cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,0),3)
-        if len(approx) == vtc:
-            approxes[i] = approx
+        approxes[i] = approx
     return approxes
 
 
-def find_arrow_like(approxes: dict):
+def find_arrow_like(approxes: dict, hierarchies):
     arrow_like_index = []
     points_ls = []
     for i in approxes.keys():
         approx = approxes[i]
-        hull = cv2.convexHull(approx, returnPoints=False)
-        if hull is not None:
-            try:
-                defects = cv2.convexityDefects(approx, hull)
-            except:
-                print(f"****")
-                continue
-            if defects is not None:
-                if len(defects) == 2:
-                    points = np.array([defects[0][0][:2], defects[1][0][:2]])
-                    if not ((points[:, 0] - points[:, 1]) % 7 == 5).all():
-                        continue
-                    if points[0, 1] == points[1, 0] or points[0, 0] == points[1, 1]:
-                        continue
-                    arrow_like_index.append(i)
-                    points_ls.append(points)
+        hierarchy=hierarchies[i]
+        parent=hierarchy[3]
+        if len(approx)==7:
+            if parent != -1:
+                parent_approx=approxes[parent]
+                if len(parent_approx)==4:
+                    hull = cv2.convexHull(approx, returnPoints=False)
+                    if hull is not None:
+                        try:
+                            defects = cv2.convexityDefects(approx, hull)
+                        except:
+                            print(f"****")
+                            continue
+                        if defects is not None:
+                            if len(defects) == 2:
+                                points = np.array([defects[0][0][:2], defects[1][0][:2]])
+                                if not ((points[:, 0] - points[:, 1]) % 7 == 5).all():
+                                    continue
+                                if points[0, 1] == points[1, 0] or points[0, 0] == points[1, 1]:
+                                    continue
+                                arrow_like_index.append(i)
+                                points_ls.append(points)
     return arrow_like_index, points_ls
 
 def find_angle_vector(v1,v2):
@@ -161,9 +164,9 @@ def detect_arrow(img):
     """
     arrows = []
     img_bin = preprocessing(img)
-    contours = detect_contours(img_bin)
+    contours, hierarchy = detect_contours(img_bin)
     approxes = detect_approxs(contours)
-    arrow_like_index_ls, points_ls = find_arrow_like(approxes)
+    arrow_like_index_ls, points_ls = find_arrow_like(approxes, hierarchy)
     for i in range(len(arrow_like_index_ls)):
         approx = approxes[arrow_like_index_ls[i]]
         contour = contours[arrow_like_index_ls[i]]
