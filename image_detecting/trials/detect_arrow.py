@@ -16,7 +16,6 @@ def setLabel(img, pts, label):
 
 def preprocessing(img):
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img_gauss = cv2.GaussianBlur(img_gray, (21, 21), 0)
     _, img_bin = cv2.threshold(
         img_gray, -1, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
     )
@@ -46,9 +45,9 @@ def detect_approxs(contours):
         if not shapely.Polygon(contour[:, 0, :]).is_valid:
             continue
 
-        eps = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, epsilon=eps * 0.02, closed=True)
-        cv2.drawContours(img,[approx],0,(255,0,0),3)
+        eps = cv2.arcLength(contour, True)                                  # contour의 길이
+        approx = cv2.approxPolyDP(contour, epsilon=eps * 0.02, closed=True) # contour에서 다각형 추정 
+        cv2.drawContours(img,[approx],0,(255,0,0),3)                        
 
         # cv2.putText(img,f'vtc:{vtc}',approx[0][0],cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,0),3)
         approxes[i] = approx
@@ -63,7 +62,7 @@ def find_arrow_like(approxes: dict, hierarchies):
         approx = approxes[i]
         hierarchy = hierarchies[0][i]
         parent = hierarchy[3]
-        if len(approx) == 7:
+        if len(approx) == 7: 
             if parent != -1:
                 if parent not in approxes.keys():
                     continue
@@ -79,13 +78,13 @@ def find_arrow_like(approxes: dict, hierarchies):
                         if defects is not None:
                             if len(defects) == 2:
                                 points = np.array(
-                                    [defects[0][0][:2], defects[1][0][:2]]
+                                    [defects[0][0][:2], defects[1][0][:2]]              # defect의 시작점,끝점
                                 )
-                                if not ((points[:, 0] - points[:, 1]) % 7 == 5).all():
+                                if not ((points[:, 0] - points[:, 1]) % 7 == 5).all():  # defect 간의 거리가 2가 아니면 continue
                                     continue
                                 if (
                                     points[0, 1] == points[1, 0]
-                                    or points[0, 0] == points[1, 1]
+                                    or points[0, 0] == points[1, 1]     #defect 간 시작점, 끝점 일치하면 continue
                                 ):
                                     continue
                                 arrow_like[i] = approx
@@ -105,13 +104,15 @@ def find_angle_vector(v1, v2):
 
 def find_arrow_like_properties(approx, contour, points):
     M = cv2.moments(contour)
-    cx = int(M["m10"] / M["m00"])  # 폐곡선의 중심 계산
-    cy = int(M["m01"] / M["m00"])
+    cx = int(M["m10"] / M["m00"])   # 폐곡선의 중심 계산
+    cy = int(M["m01"] / M["m00"]) 
     center = np.array([cx, cy])
-    head_n = 21 - np.sum(points[:, 0] + 1) - np.sum(points.reshape(4))
+    
+    head_n = 21 - np.sum(points[:, 0] + 1) - np.sum(points.reshape(4))  # 0~6의 합 - defect들의 위치의 합 - defect 시작점,끝점의 합 = head의 위치
     head = approx[head_n][0]
-    right = approx[(head_n + 1) % 7][0]
-    left = approx[(head_n - 1) % 7][0]
+    right = approx[(head_n + 1) % 7][0] #right = head_n+1번째 꼭짓점의 위치
+    left = approx[(head_n - 1) % 7][0]  #left = head_n-1번째 꼭짓점의 위치
+    
     # 중심축에서 오른쪽, 왼쪽 까지의 거리, https://stackoverflow.com/questions/39840030/distance-between-point-and-a-line-from-two-points 참조
     right_distance = np.linalg.norm(
         np.cross(center - head, head - right)
@@ -123,6 +124,7 @@ def find_arrow_like_properties(approx, contour, points):
         np.cross(left - right, right - head)
     ) / np.linalg.norm(left - right)
     intersection = line_intersection([head, center], [right, left])
+    
     properties = {
         "M": M,
         "center": center,
@@ -134,15 +136,9 @@ def find_arrow_like_properties(approx, contour, points):
         "head_distance": head_distance,
         "intersection": intersection,
     }
+    
     return properties
 
-    """cv2.circle(img,head,10,(255,255,255),-1)
-    cv2.drawContours(img,[approx],0,(0,0,255),3)
-    cv2.drawContours(canv,[approx],0,(255,255,255),3)
-    setLabel(img,approx,f'{get_heading(head,[cx,cy]):.2f}')
-    for ix in range(len(hrl)):
-        cv2.circle(img,hrl[ix],10,(0,255,0),-1)
-    cv2.putText(img,'right',hrl[1],cv2.FONT_HERSHEY_SIMPLEX,4,(0,255,0),3)"""
 
 
 def draw(img, approx, properties):
@@ -164,13 +160,19 @@ def draw(img, approx, properties):
 
 
 def detect_arrow(img):
-    """detect arrows in input image.
+    """detect arrow from captured image
 
     Args:
-        img : input image
+        img (_type_): captured image
 
     Returns:
-        list: list of dictionary. each dictionary means a arrow.
+        list: list of detected arrows' properties(dict). 
+        - each properties contains
+            - contour
+            - approx of hull
+            - parent's approx
+            - left, right distance
+            - intersection point between head-center line, right-left line
     """
     arrows = []
     img_bin = preprocessing(img)
@@ -185,12 +187,12 @@ def detect_arrow(img):
         properties["approx"] = arrow_like[i]
         properties["parent"] = parents[i]
         if (
-            abs(properties["left_distance"] - properties["right_distance"])
-            / max(properties["left_distance"], properties["right_distance"])
+            abs(properties["left_distance"] - properties["right_distance"])     # 오른쪽 왼쪽 꼭짓점 간의 거리가 둘 중 긴 거리의 20% 보다 크면 continue
+            / max(properties["left_distance"], properties["right_distance"])    # 화살표는 좌우 대칭으로 가정, 거리 측정 오차 20%로 가정
             < 0.2
         ):
             if (
-                cv2.pointPolygonTest(contours[i], properties["intersection"], False)
+                cv2.pointPolygonTest(contours[i], properties["intersection"], False)    #교차점이 contour 안에 있지 않은면 continue
                 == 1
             ):
                 arrows.append(properties)
@@ -225,22 +227,29 @@ if __name__ == "__main__":
     w = 771
 
     while cap.isOpened():
+        
         curr_time = time.time()
         term = curr_time - prev_time
         status, img = cap.read()
         fps = 1 / term
         prev_time = curr_time
+        
         arrows = detect_arrow(img)
+        
         for arrow in arrows:
+            
             cv2.circle(img, arrow["center"], 5, (0, 255, 0), 3)
             cv2.drawContours(
                 img, [arrow["contour"], arrow["parent"]], -1, (0, 0, 255), 3
             )
+            
             distance = [
                 np.sqrt(np.sum(np.square(arrow["parent"][i][0] - arrow["left"])))
                 for i in range(4)
             ]
+            
             tl = np.argmin(distance) - 1
+            
             mtrx = cv2.getPerspectiveTransform(
                 np.float32(
                     [
@@ -252,8 +261,11 @@ if __name__ == "__main__":
                 ),
                 np.float32([[0, 0], [w, 0], [w, h], [0, h]]),
             )
+            
             rtv = cv2.warpPerspective(img, mtrx, (w, h))
             cv2.imshow("warp", rtv)
+            
+            
             r = R.from_matrix(mtrx)
             euler = r.as_euler("zxy",degrees=True)
             cv2.putText(
