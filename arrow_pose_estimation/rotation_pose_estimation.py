@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from image_detecting.trials import detect_arrow
+from arrow_detecting.trials import detect_arrow
 import numpy as np
 import cv2
 import pickle
