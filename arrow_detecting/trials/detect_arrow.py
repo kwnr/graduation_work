@@ -47,7 +47,6 @@ def detect_approxs(contours):
 
         eps = cv2.arcLength(contour, True)                                  # contour의 길이
         approx = cv2.approxPolyDP(contour, epsilon=eps * 0.02, closed=True) # contour에서 다각형 추정 
-        cv2.drawContours(img,[approx],0,(255,0,0),3)                        
 
         # cv2.putText(img,f'vtc:{vtc}',approx[0][0],cv2.FONT_HERSHEY_SIMPLEX,1,(255,100,0),3)
         approxes[i] = approx

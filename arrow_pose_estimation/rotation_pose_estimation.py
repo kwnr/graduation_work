@@ -41,7 +41,7 @@ def get_objp():
     Returns:
         ndarray: shape 4*3
     """
-    img=cv2.imread("/Users/hyeokbeom/Desktop/graduation_work/arrow_box.png")
+    img=cv2.imread("/Users/hyeokbeom/Desktop/graduation_work/arrow_box_no_margin.png")
     objp=np.zeros((4,3),np.float32)                     # 네 꼭짓점의 3차원 좌표를 담기 위한 배열
     arrows=detect_arrow.detect_arrow(img)
     
@@ -61,38 +61,28 @@ def get_objp():
             ])
         objp[:,:2]=box                                  # x,y 좌표 대입
         
-        return objp ###indent error
+    return objp
 
 
 #http://www.gisdeveloper.co.kr/?p=6908 참조
 def estimate_pose(img,approx_box,mtx,dst,objp):
-    axis = np.float32([[800,0,0], [0,800,0], [0,0,-800]]).reshape(-1,3)
     
     corners2=cv2.cornerSubPix(img,np.float32(approx_box),(11,11),(-1,-1),(cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)) #box의 코너 위치 정밀화
     
     # 기준자세 좌표 (objp)와 정밀화된 꼭짓점을 이용해 자세추정
     # rvecs: 회전 벡터, tvecs: 이동 벡터
-    _,rvecs,tvecs,inliers=cv2.solvePnPRansac(objp,corners2,mtx,dst) 
+    _,rvecs,tvecs,inliers=cv2.solvePnPRansac(objp,corners2,mtx,dst,flags=cv2.SOLVEPNP_P3P) 
+
     
-    # 회전된 축 그리기
-    imgpts,jac=cv2.projectPoints(axis,rvecs,tvecs,mtx,dst)
-    canv=img.copy()
-    canv=cv2.cvtColor(canv,cv2.COLOR_GRAY2BGR)
-    canv=draw_axes(canv,corners2,imgpts)
-    print(rvecs)
-    return rvecs
     
-def draw_axes(img, corners, imgpts):
-    corner = tuple(corners[0].ravel())
-    img = cv2.line(img, np.int32(corner), np.int32(imgpts[0].ravel()), (255,0,0), 5)
-    img = cv2.line(img, np.int32(corner), np.int32(imgpts[1].ravel()), (0,255,0), 5)
-    img = cv2.line(img, np.int32(corner), np.int32(imgpts[2].ravel()), (0,0,255), 5)
-    return img
+    return rvecs,tvecs
 
 if __name__=='__main__':
     cap=cv2.VideoCapture(1)
     f=open('/Users/hyeokbeom/Desktop/graduation_work/camera_matrix.pkl','rb')
     mtx,dst=pickle.load(f)
+    h = 1267
+    w = 771
     f.close()
     objp=get_objp()
     while cap.isOpened():
@@ -103,10 +93,12 @@ if __name__=='__main__':
 
         
         for arrow in arrows:
+            
             distance = [
                 np.sqrt(np.sum(np.square(arrow["parent"][i][0] - arrow["left"])))
                 for i in range(4)
             ]
+            
             tl = np.argmin(distance) - 1
             box=np.float32(
                         [
@@ -115,7 +107,33 @@ if __name__=='__main__':
                             arrow["parent"][(tl + 2) % 4, 0, :],
                             arrow["parent"][(tl + 3) % 4, 0, :],
                         ])
-            rvecs=estimate_pose(gray,box,mtx,dst,objp)
+            
+            perspective_matrix = cv2.getPerspectiveTransform(
+                np.float32(
+                    [
+                        arrow["parent"][tl % 4, 0, :],
+                        arrow["parent"][(tl + 1) % 4, 0, :],
+                        arrow["parent"][(tl + 2) % 4, 0, :],
+                        arrow["parent"][(tl + 3) % 4, 0, :],
+                    ]
+                ),
+                np.float32([[0, 0], [w, 0], [w, h], [0, h]]),
+            )
+            
+            rvecs,tvecs=estimate_pose(gray,box,mtx,dst,objp)
+            Rt, jacobian=cv2.Rodrigues(rvecs)
+            R=Rt.T
+            
+            pos=-R*tvecs
+            roll = np.rad2deg(np.arctan2(-R[2][1], R[2][2]))
+            pitch = np.rad2deg(np.arcsin(R[2][0]))
+            yaw = np.rad2deg(np.arctan2(-R[1][0], R[0][0]))
+            
+            rtv=cv2.warpPerspective(img,perspective_matrix,(w,h))
+            cv2.putText(rtv,f'pos:{arrow["center"]}, r:{roll:.1f}, p:{pitch:.1f}, y:{yaw:.1f}',[0,h-10],cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
+            cv2.imshow('warp',rtv)
+            
+            cv2.drawFrameAxes(img,mtx,dst,rvecs,tvecs,1000)
             x,y,z=np.rad2deg(rvecs[:,0])
             cv2.putText(img,f'{x:.2f},{y:.2f},{z:.2f}',np.int32(box[0]),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),3)
         cv2.imshow('a',img)

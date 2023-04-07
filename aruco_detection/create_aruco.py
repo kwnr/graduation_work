@@ -16,9 +16,9 @@ def draw_charuco_board(dict,size,out_size,margin,square_length,marker_length,ids
     return charuco_img
 
 if __name__=="__main__":
-    aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-    charuco_img=draw_charuco_board(aruco_dict,[3,3],[1000,1000],50,200,100,np.array([1,11,21,31]))
-    cv2.imwrite('charuco.png',charuco_img)
-    cv2.imshow("charuco",charuco_img)
+    aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
+    img=draw_aruco_board(aruco_dict,[2,2],[1000,1000],0.1,0.02,np.array([1,11,21,31]),margin=50)
+    cv2.imwrite('aruco_board.png',img)
+    cv2.imshow("aruco",img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
