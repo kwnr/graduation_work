@@ -87,19 +87,6 @@ def main():
         if cv2.waitKey(1) & 0xFF ==ord('q'):
             break
         
-    plt.figure(1)
-    plt.subplot(3,1,1)
-    plt.plot(df.t,df.roll,'r',df.t,df.roll_est,'b')
-    plt.legend(['measured','filtered'])
-    plt.title('roll')
-    plt.subplot(3,1,2)
-    plt.plot(df.t,df.pitch,'r',df.t,df.pitch_est,'b')
-    plt.legend(['measured','filtered'])
-    plt.title('pitch')
-    plt.subplot(3,1,3)
-    plt.plot(df.t,df.yaw,'r',df.t,df.yaw_est,'b')
-    plt.legend(['measured','filtered'])
-    plt.title('yaw')
     
     plt.figure(2)
     plt.subplot(3,1,1)
