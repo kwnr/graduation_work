@@ -27,6 +27,7 @@ class BoardDetection():
 
     def pipeline(self,img,draw=False):
         roll,pitch,yaw=[None,None,None]
+        rvec,tvec=None,None
         objp,imgp=self.detect_match_marker(img)
         if objp is not None:
             rvec,tvec=self.solve_pnp(objp,imgp)
@@ -34,4 +35,4 @@ class BoardDetection():
                 cv2.aruco.drawDetectedMarkers(img,self.corners,self.ids)
                 cv2.drawFrameAxes(img,self.camera_matrix,self.dist_coeffs,rvec,tvec,10)
             
-            return np.vstack((tvec,rvec))
+        return rvec,tvec
