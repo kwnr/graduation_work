@@ -2,19 +2,36 @@ import cv2
 import numpy as np
 import pickle
 
-cap=cv2.VideoCapture(0)
+cap1=cv2.VideoCapture(0)
+cap2=cv2.VideoCapture(2)
+
+w=640
+h=480
+
+cap1.set(cv2.CAP_PROP_FRAME_HEIGHT,w)
+cap1.set(cv2.CAP_PROP_FRAME_WIDTH,h)
+
+cap2.set(cv2.CAP_PROP_FRAME_HEIGHT,w)
+cap2.set(cv2.CAP_PROP_FRAME_WIDTH,h)
+
+
 aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
-with open('/Users/hyeokbeom/Desktop/graduation_work/camera_matrix.pkl','rb') as f:
+with open('camera_matrix.pkl','rb') as f:
     camera_matrix,dist_coeffs=pickle.load(f)
     
 
 detector=cv2.aruco.ArucoDetector(aruco_dict)
 
-board_img=cv2.imread('/Users/hyeokbeom/Desktop/graduation_work/aruco_board.png')
+board_img=cv2.imread('aruco_board.png')
 board=cv2.aruco.GridBoard([2,2],100,20,aruco_dict,ids=np.array([1,11,21,31]))
 
-while cap.isOpened():
-    _,img=cap.read()
+while cap1.isOpened():
+    _,img1=cap1.read()
+    _,img2=cap2.read()
+    img1=cv2.cvtColor(img1,cv2.COLOR_BGR2GRAY)
+    img2=cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+    img=np.hsatck((img1,img2))
+    
     img_copy=img.copy()
     
     corners,ids,_=detector.detectMarkers(img)
@@ -34,5 +51,6 @@ while cap.isOpened():
     if cv2.waitKey(1) & 0xFF==ord('q'):
         break
     
-cap.release()
+cap1.release()
+cap2.release()
 cv2.destroyAllWindows()
