@@ -16,13 +16,13 @@ cap2.set(cv2.CAP_PROP_FRAME_WIDTH,h)
 
 
 aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
-with open('camera_matrix.pkl','rb') as f:
+with open('../camera_matrix.pkl','rb') as f:
     camera_matrix,dist_coeffs=pickle.load(f)
     
 
 detector=cv2.aruco.ArucoDetector(aruco_dict)
 
-board_img=cv2.imread('aruco_board.png')
+board_img=cv2.imread('../aruco_board.png')
 board=cv2.aruco.GridBoard([2,2],100,20,aruco_dict,ids=np.array([1,11,21,31]))
 
 while cap1.isOpened():

@@ -5,7 +5,7 @@ import pickle
 class BoardDetection():
     def __init__(self) -> None:
         self.aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
-        with open('/Users/hyeokbeom/Desktop/graduation_work/camera_matrix.pkl','rb') as f:
+        with open('../camera_matrix.pkl','rb') as f:
             self.camera_matrix,self.dist_coeffs=pickle.load(f)
         self.detector=cv2.aruco.ArucoDetector(self.aruco_dict)
         self.board=cv2.aruco.GridBoard([2,2],100,20,self.aruco_dict,ids=np.array([1,11,21,31]))
