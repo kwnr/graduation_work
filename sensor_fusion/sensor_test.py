@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sensor=MPU6050()
-phi,theta,psi=0
+phi,theta,psi=0,0,0
 phis=[0]
 thetas=[0]
 psis=[0]
