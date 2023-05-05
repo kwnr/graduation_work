@@ -1,7 +1,6 @@
 import smbus					#import SMBus module of I2C
 from time import sleep          #import
 import matplotlib.pyplot as plt
-import keyboard
 
 #some MPU6050 Registers and their Address
 PWR_MGMT_1   = 0x6B
@@ -55,9 +54,9 @@ MPU_Init()
 print (" Reading Data of Gyroscope and Accelerometer")
 
 Gxs,Gys,Gzs=[0],[0],[0]
+dt=0.1
 
-
-while True:
+while len(Gxs)<100:
     #Read Accelerometer raw value
     acc_x = read_raw_data(ACCEL_XOUT_H)
     acc_y = read_raw_data(ACCEL_YOUT_H)
@@ -77,13 +76,11 @@ while True:
     Gy = gyro_y/131.0
     Gz = gyro_z/131.0
     
-    Gxs.append(Gx+Gxs[-1])
-    Gys.append(Gy+Gys[-1])
-    Gzs.append(Gz+Gzs[-1])
+    Gxs.append(Gx+Gxs[-1]*dt)
+    Gys.append(Gy+Gys[-1]*dt)
+    Gzs.append(Gz+Gzs[-1]*dt)
     print ("Gx=%.2f" %Gx, u'\u00b0'+ "/s", "\tGy=%.2f" %Gy, u'\u00b0'+ "/s", "\tGz=%.2f" %Gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %Ax, "\tAy=%.2f g" %Ay, "\tAz=%.2f g" %Az) 	
-    sleep(1)
-    if keyboard.is_pressed("q"):
-        break
+    sleep(dt)
 
 tspan=list(range(len(Gxs)))
 plt.figure(1)
