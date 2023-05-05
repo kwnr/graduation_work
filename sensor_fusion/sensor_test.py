@@ -1,6 +1,7 @@
 import smbus					#import SMBus module of I2C
 from time import sleep          #import
 import matplotlib.pyplot as plt
+import keyboard
 
 #some MPU6050 Registers and their Address
 PWR_MGMT_1   = 0x6B
@@ -55,41 +56,43 @@ print (" Reading Data of Gyroscope and Accelerometer")
 
 Gxs,Gys,Gzs=[],[],[]
 
-try:
-    while True:
-        #Read Accelerometer raw value
-        acc_x = read_raw_data(ACCEL_XOUT_H)
-        acc_y = read_raw_data(ACCEL_YOUT_H)
-        acc_z = read_raw_data(ACCEL_ZOUT_H)
-        
-        #Read Gyroscope raw value
-        gyro_x = read_raw_data(GYRO_XOUT_H)
-        gyro_y = read_raw_data(GYRO_YOUT_H)
-        gyro_z = read_raw_data(GYRO_ZOUT_H)
-        
-        #Full scale range +/- 250 degree/C as per sensitivity scale factor
-        Ax = acc_x/16384.0
-        Ay = acc_y/16384.0
-        Az = acc_z/16384.0
-        
-        Gx = gyro_x/131.0
-        Gy = gyro_y/131.0
-        Gz = gyro_z/131.0
-        
-        Gxs.append(Gx)
-        Gys.append(Gy)
-        Gzs.append(Gz)
-        print ("Gx=%.2f" %Gx, u'\u00b0'+ "/s", "\tGy=%.2f" %Gy, u'\u00b0'+ "/s", "\tGz=%.2f" %Gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %Ax, "\tAy=%.2f g" %Ay, "\tAz=%.2f g" %Az) 	
-        sleep(1)
-except KeyboardInterrupt:
-    tspan=list(range(len(Gxs)))
-    plt.figure(1)
-    plt.subplot(3,1,1)
-    plt.title("Gx")
-    plt.plot(tspan,Gxs)
-    plt.subplot(3,1,2)
-    plt.title("Gy")
-    plt.plot(tspan,Gys)
-    plt.subplot(3,1,3)
-    plt.title("Gz")
-    plt.plot(tspan,Gzs)
+
+while True:
+    #Read Accelerometer raw value
+    acc_x = read_raw_data(ACCEL_XOUT_H)
+    acc_y = read_raw_data(ACCEL_YOUT_H)
+    acc_z = read_raw_data(ACCEL_ZOUT_H)
+    
+    #Read Gyroscope raw value
+    gyro_x = read_raw_data(GYRO_XOUT_H)
+    gyro_y = read_raw_data(GYRO_YOUT_H)
+    gyro_z = read_raw_data(GYRO_ZOUT_H)
+    
+    #Full scale range +/- 250 degree/C as per sensitivity scale factor
+    Ax = acc_x/16384.0
+    Ay = acc_y/16384.0
+    Az = acc_z/16384.0
+    
+    Gx = gyro_x/131.0
+    Gy = gyro_y/131.0
+    Gz = gyro_z/131.0
+    
+    Gxs.append(Gx+Gxs(-1))
+    Gys.append(Gy+Gys(-1))
+    Gzs.append(Gz+Gzs(-1))
+    print ("Gx=%.2f" %Gx, u'\u00b0'+ "/s", "\tGy=%.2f" %Gy, u'\u00b0'+ "/s", "\tGz=%.2f" %Gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %Ax, "\tAy=%.2f g" %Ay, "\tAz=%.2f g" %Az) 	
+    sleep(1)
+    if keyboard.is_pressed("q"):
+        break
+
+tspan=list(range(len(Gxs)))
+plt.figure(1)
+plt.subplot(3,1,1)
+plt.title("Gx")
+plt.plot(tspan,Gxs)
+plt.subplot(3,1,2)
+plt.title("Gy")
+plt.plot(tspan,Gys)
+plt.subplot(3,1,3)
+plt.title("Gz")
+plt.plot(tspan,Gzs)
