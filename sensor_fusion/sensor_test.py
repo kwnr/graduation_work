@@ -1,95 +1,31 @@
-import smbus					#import SMBus module of I2C
-from time import sleep          #import
+from read_sensor import MPU6050
+import numpy as np
 import matplotlib.pyplot as plt
 
-#some MPU6050 Registers and their Address
-PWR_MGMT_1   = 0x6B
-SMPLRT_DIV   = 0x19
-CONFIG       = 0x1A
-GYRO_CONFIG  = 0x1B
-INT_ENABLE   = 0x38
-ACCEL_XOUT_H = 0x3B
-ACCEL_YOUT_H = 0x3D
-ACCEL_ZOUT_H = 0x3F
-GYRO_XOUT_H  = 0x43
-GYRO_YOUT_H  = 0x45
-GYRO_ZOUT_H  = 0x47
-
-
-def MPU_Init():
-	#write to sample rate register
-	bus.write_byte_data(Device_Address, SMPLRT_DIV, 7)
-	
-	#Write to power management register
-	bus.write_byte_data(Device_Address, PWR_MGMT_1, 1)
-	
-	#Write to Configuration register
-	bus.write_byte_data(Device_Address, CONFIG, 0)
-	
-	#Write to Gyro configuration register
-	bus.write_byte_data(Device_Address, GYRO_CONFIG, 24)
-	
-	#Write to interrupt enable register
-	bus.write_byte_data(Device_Address, INT_ENABLE, 1)
-
-def read_raw_data(addr):
-	#Accelero and Gyro value are 16-bit
-        high = bus.read_byte_data(Device_Address, addr)
-        low = bus.read_byte_data(Device_Address, addr+1)
-    
-        #concatenate higher and lower value
-        value = ((high << 8) | low)
+sensor=MPU6050()
+phi,theta,psi=0
+phis=[0]
+thetas=[0]
+psis=[0]
+dt=0.1;
+while len(psis)==60*dt:
+        Ax,Ay,Az,Gx,Gy,Gz=MPU6050.read_value()
+        psi,theta,psi=np.array([[1,np.sin(phi)*np.tan(theta),np.cos(phi)*np.tan(theta)],
+                        [0,np.cos(phi),-np.sin(phi)],
+                        [0,np.sin(phi)/np.cos(theta),np.cos(phi)/np.cos(theta)]])@np.array([Gx,Gy,Gz]).T
+        phis.append(phis[-1]+psi*dt)
+        thetas.append(thetas[-1]+psi*dt)
+        psis.append(psis[-1]+psi*dt)
         
-        #to get signed value from mpu6050
-        if(value > 32768):
-                value = value - 65536
-        return value
 
-
-bus = smbus.SMBus(1) 	# or bus = smbus.SMBus(0) for older version boards
-Device_Address = 0x68   # MPU6050 device address
-
-MPU_Init()
-
-print (" Reading Data of Gyroscope and Accelerometer")
-
-Gxs,Gys,Gzs=[0],[0],[0]
-dt=0.1
-
-while len(Gxs)<100:
-    #Read Accelerometer raw value
-    acc_x = read_raw_data(ACCEL_XOUT_H)
-    acc_y = read_raw_data(ACCEL_YOUT_H)
-    acc_z = read_raw_data(ACCEL_ZOUT_H)
-    
-    #Read Gyroscope raw value
-    gyro_x = read_raw_data(GYRO_XOUT_H)
-    gyro_y = read_raw_data(GYRO_YOUT_H)
-    gyro_z = read_raw_data(GYRO_ZOUT_H)
-    
-    #Full scale range +/- 250 degree/C as per sensitivity scale factor
-    Ax = acc_x/16384.0
-    Ay = acc_y/16384.0
-    Az = acc_z/16384.0
-    
-    Gx = gyro_x/131.0
-    Gy = gyro_y/131.0
-    Gz = gyro_z/131.0
-    
-    Gxs.append(Gx+Gxs[-1]*dt)
-    Gys.append(Gy+Gys[-1]*dt)
-    Gzs.append(Gz+Gzs[-1]*dt)
-    print ("Gx=%.2f" %Gx, u'\u00b0'+ "/s", "\tGy=%.2f" %Gy, u'\u00b0'+ "/s", "\tGz=%.2f" %Gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %Ax, "\tAy=%.2f g" %Ay, "\tAz=%.2f g" %Az) 	
-    sleep(dt)
-
-tspan=list(range(len(Gxs)))
 plt.figure(1)
 plt.subplot(3,1,1)
-plt.title("Gx")
-plt.plot(tspan,Gxs)
+plt.title('phi')
+plt.plot(phis)
 plt.subplot(3,1,2)
-plt.title("Gy")
-plt.plot(tspan,Gys)
+plt.title('theta')
+plt.plot(theta)
 plt.subplot(3,1,3)
-plt.title("Gz")
-plt.plot(tspan,Gzs)
+plt.title('psi')
+plt.plot(psis)
+plt.show()
