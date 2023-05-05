@@ -8,7 +8,7 @@ phis=[0]
 thetas=[0]
 psis=[0]
 dt=0.1;
-while len(psis)==60*dt:
+while len(psis)<60/dt:
         Ax,Ay,Az,Gx,Gy,Gz=MPU6050.read_value()
         psi,theta,psi=np.array([[1,np.sin(phi)*np.tan(theta),np.cos(phi)*np.tan(theta)],
                         [0,np.cos(phi),-np.sin(phi)],
