@@ -11,12 +11,13 @@ psis=[0]
 dt=0.1;
 while len(psis)<60/dt:
         Ax,Ay,Az,Gx,Gy,Gz=sensor.read_value()
-        psi,theta,psi=np.array([[1,np.sin(phi)*np.tan(theta),np.cos(phi)*np.tan(theta)],
+        phi,theta,psi=np.array([[1,np.sin(phi)*np.tan(theta),np.cos(phi)*np.tan(theta)],
                         [0,np.cos(phi),-np.sin(phi)],
                         [0,np.sin(phi)/np.cos(theta),np.cos(phi)/np.cos(theta)]])@np.array([Gx,Gy,Gz]).T
-        phis.append(phis[-1]+psi*dt)
-        thetas.append(thetas[-1]+psi*dt)
+        phis.append(phis[-1]+phi*dt)
+        thetas.append(thetas[-1]+thetas*dt)
         psis.append(psis[-1]+psi*dt)
+        print(f'phi: {phi}, theta: {theta}, psi:{psi}')
         sleep(dt)
         
 
