@@ -1,6 +1,7 @@
 from read_sensor import MPU6050
 import numpy as np
 import matplotlib.pyplot as plt
+from time import sleep
 
 sensor=MPU6050()
 phi,theta,psi=0,0,0
@@ -16,6 +17,7 @@ while len(psis)<60/dt:
         phis.append(phis[-1]+psi*dt)
         thetas.append(thetas[-1]+psi*dt)
         psis.append(psis[-1]+psi*dt)
+        sleep(dt)
         
 
 plt.figure(1)
