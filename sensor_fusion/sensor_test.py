@@ -54,7 +54,7 @@ MPU_Init()
 
 print (" Reading Data of Gyroscope and Accelerometer")
 
-Gxs,Gys,Gzs=[],[],[]
+Gxs,Gys,Gzs=[0],[0],[0]
 
 
 while True:
