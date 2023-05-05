@@ -15,7 +15,7 @@ while len(psis)<60/dt:
                         [0,np.cos(phi),-np.sin(phi)],
                         [0,np.sin(phi)/np.cos(theta),np.cos(phi)/np.cos(theta)]])@np.array([Gx,Gy,Gz]).T
         phis.append(phis[-1]+phi*dt)
-        thetas.append(thetas[-1]+thetas*dt)
+        thetas.append(thetas[-1]+theta*dt)
         psis.append(psis[-1]+psi*dt)
         print(f'phi: {phi}, theta: {theta}, psi:{psi}')
         sleep(dt)
