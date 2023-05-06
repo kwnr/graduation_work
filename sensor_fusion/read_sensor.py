@@ -69,10 +69,14 @@ class MPU6050():
 
 if __name__=="__main__":
     print (" Reading Data of Gyroscope and Accelerometer")
+    import numpy as np
     gyro=MPU6050()
-    while True:
+    sensor_value=[]
+    while len(sensor_value)<600:
         
         #Read Accelerometer raw value
         Ax,Ay,Az,Gx,Gy,Gz=gyro.read_value()
-        print ("Gx=%.2f" %Gx, u'\u00b0'+ "/s", "\tGy=%.2f" %Gy, u'\u00b0'+ "/s", "\tGz=%.2f" %Gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %Ax, "\tAy=%.2f g" %Ay, "\tAz=%.2f g" %Az) 	
-        sleep(1)
+        Gx,Gy,Gz=np.deg2rad([Gx,Gy,Gz])
+        sensor_value.append([Ax,Ay,Az,Gx,Gy,Gz])
+    sensor_value=np.array(sensor_value)
+    np.savetxt('sensor.csv',sensor_value,delimiter=',')
