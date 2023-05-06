@@ -79,5 +79,6 @@ if __name__=="__main__":
         Gx,Gy,Gz=np.deg2rad([Gx,Gy,Gz])
         sensor_value.append([Ax,Ay,Az,Gx,Gy,Gz])
         sleep(0.1)
+        print(f'{Gx},{Gy},{Gz}')
     sensor_value=np.array(sensor_value)
     np.savetxt('sensor.csv',sensor_value,delimiter=',')
