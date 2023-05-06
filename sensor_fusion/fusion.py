@@ -47,14 +47,13 @@ while len(phis)<600:
     phis.append(phi)
     thetas.append(theta)
     psis.append(psi)
+    print(f'{phis}  {thetas}  {psis}')
     sleep(dt)
     
 euler=np.concatenate((phis,thetas,psis))
 gyro=np.concatenate((phis_gryo,thetas_gyro,psis_gyro))
-with open("euler.txt",'w') as f:
-    f.write(euler)
-with open("gyro.txt",'w') as f:
-    f.write(gyro)
+np.savetxt("euler.csv",euler,delimiter=',')
+np.savetxt("gyro.csv",gyro,delimiter=',')
 
 plt.figure(1)
 plt.subplot(3,1,1)
