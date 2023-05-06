@@ -50,8 +50,8 @@ while len(phis)<600:
     print(f'{phi}  {theta}  {psi}')
     sleep(dt)
     
-euler=np.array([phis,thetas,psis]).reshape((len(phis),3))
-gyro=np.array((phis_gryo,thetas_gyro,psis_gyro)).reshape(len(phis_gryo),3)
+euler=np.vstack([phis,thetas,psis]) 
+gyro=np.vstack([phis_gryo,thetas_gyro,psis_gyro])
 np.savetxt("euler.csv",euler,delimiter=',')
 np.savetxt("gyro.csv",gyro,delimiter=',')
 
