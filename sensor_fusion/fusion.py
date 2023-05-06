@@ -19,6 +19,10 @@ g=9.81
 phis=[phi]
 thetas=[theta]
 psis=[psi]
+phi_gyro,theta_gyro,psi_gyro=0,0,0
+phis_gryo=[0]
+thetas_gyro=[0]
+psis_gyro=[0]
 
 while len(phis)<600:
     Ax,Ay,Az,Gx,Gy,Gz=sensor.read_value()
@@ -28,6 +32,13 @@ while len(phis)<600:
         [Gz,Gy,-Gz,0],
         [0,-Gx,-Gy,-Gz]
     ])
+    phi_gyro,theta_gyro,psi_gyro=np.array([[1,np.sin(phi_gyro)*np.tan(theta_gyro),np.cos(phi_gyro)*np.tan(theta_gyro)],
+                        [0,np.cos(phi_gyro),-np.sin(phi_gyro)],
+                        [0,np.sin(phi_gyro)/np.cos(theta_gyro),np.cos(phi_gyro)/np.cos(theta_gyro)]])@np.array([Gx,Gy,Gz]).T
+    phis_gryo.append(phis_gryo[-1]+phi_gyro*dt)
+    thetas_gyro.append(thetas_gyro[-1]+theta_gyro*dt)
+    psis_gyro.append(psis_gyro[-1]+psi_gyro*dt)
+    
     theta=np.arcsin(Ax/g)
     phi=np.arcsin(-Ay/(g*np.cos(theta)))
     z=R.from_euler('zyx',[theta,phi,0])
@@ -39,17 +50,23 @@ while len(phis)<600:
     sleep(dt)
     
 euler=np.concatenate((phis,thetas,psis))
+gyro=np.concatenate((phis_gryo,thetas_gyro,psis_gyro))
 with open("euler.txt",'w') as f:
     f.write(euler)
+with open("gyro.txt",'w') as f:
+    f.write(gyro)
 
 plt.figure(1)
 plt.subplot(3,1,1)
 plt.title('phi')
-plt.plot(euler[0,:])
+plt.plot(euler[:,0])
+plt.plot(gyro[:,0])
 plt.subplot(3,1,2)
 plt.title('theta')
-plt.plot(euler[1,:])
+plt.plot(euler[:,1])
+plt.plot(gyro[:,1])
 plt.subplot(3,1,3)
 plt.title('psi')
-plt.plot(euler[2,:])
+plt.plot(euler[:,2])
+plt.plot(gyro[:,2])
 plt.show()
