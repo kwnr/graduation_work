@@ -47,7 +47,7 @@ while len(phis)<600:
     phis.append(phi)
     thetas.append(theta)
     psis.append(psi)
-    print(f'{phis}  {thetas}  {psis}')
+    print(f'{phi}  {theta}  {psi}')
     sleep(dt)
     
 euler=np.concatenate((phis,thetas,psis))
