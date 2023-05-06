@@ -42,7 +42,7 @@ while len(phis)<600:
     theta=np.arcsin(Ax/g)
     phi=np.arcsin(-Ay/(g*np.cos(theta)))
     z=R.from_euler('zyx',[theta,phi,0])
-    x=kf.run(z)
+    x=kf.run(z.as_quat)
     phi,theta,psi=R.from_quat(x).as_euler('zyx',degrees=True)
     phis.append(phi)
     thetas.append(theta)
