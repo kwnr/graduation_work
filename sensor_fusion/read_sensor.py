@@ -78,5 +78,6 @@ if __name__=="__main__":
         Ax,Ay,Az,Gx,Gy,Gz=gyro.read_value()
         Gx,Gy,Gz=np.deg2rad([Gx,Gy,Gz])
         sensor_value.append([Ax,Ay,Az,Gx,Gy,Gz])
+        sleep(0.1)
     sensor_value=np.array(sensor_value)
     np.savetxt('sensor.csv',sensor_value,delimiter=',')
