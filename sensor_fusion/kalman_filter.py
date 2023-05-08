@@ -7,7 +7,7 @@ class KalmanFilter():
         self.Q=np.zeros(input_size)
         self.R=np.zeros(output_size)
         self.P=np.zeros(input_size)
-        self.x=np.zeros((input_size,output_size))
+        self.x=np.zeros((input_size,1))
         
     def run(self,z):
         x_pred=self.A@self.x
