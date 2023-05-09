@@ -64,6 +64,7 @@ phis=np.array([phi])
 thetas=np.array([theta])
 psis=np.array([psi])
 phi_gyro,theta_gyro,psi_gyro=0,0,0
+acc_val=[]
 phis_gryo=[0]
 thetas_gyro=[0]
 psis_gyro=[0]
@@ -72,7 +73,6 @@ sensor_value=[]
 for i in range(len(sensor)):
     Ax,Ay,Az,Gx,Gy,Gz=sensor[i]
     Ax,Ay,Az=init_acc.apply([Ax,Ay,Az])
-    Ax,Ay,Az=np.array([Ax,Ay,Az])/np.linalg.norm([Ax,Ay,Az])*9.81
     Gx=Gx-biasGx
     Gy=Gy-biasGy
     Gz=Gz-biasGz
@@ -94,6 +94,7 @@ for i in range(len(sensor)):
     theta=np.arctan(Ay/Az)
     phi=np.arctan(Ax/np.sqrt(Ay**2+Az**2))
     psi=0
+    acc_val.append([theta,phi,psi])
     
     cosphi=np.cos(phi/2)
     costhe=np.cos(theta/2)
@@ -119,9 +120,11 @@ for i in range(len(sensor)):
     
 euler=np.vstack([phis,thetas,psis]) 
 gyro=np.vstack([phis_gryo,thetas_gyro,psis_gyro])
+acc=np.array(acc_val).reshape((3,600)).T
 
 euler=np.rad2deg(euler[:,1:])
 gyro=np.rad2deg(gyro[:,1:])
+acc=np.rad2deg(acc)
 
 plt.figure(1)
 plt.subplot(3,1,1)
@@ -137,4 +140,8 @@ plt.subplot(3,1,3)
 plt.title('psi')
 plt.plot(gyro[2])
 plt.plot(euler[2])
+plt.show()
+
+plt.figure(2)
+plt.plot(acc)
 plt.show()
