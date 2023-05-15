@@ -9,7 +9,7 @@ kf=KalmanFilter(4,4)
 kf.H=np.eye(4)
 kf.Q=np.eye(4)*0.0001
 kf.R=np.eye(4)*10
-kf.x=np.array([0,0,0,1]).T
+kf.x=np.array([0,0,0,1]).reshape(4,1)
 kf.P=np.eye(4)
 
 biasGx=-0.00878016
@@ -26,12 +26,14 @@ phi_gyro,theta_gyro,psi_gyro=0,0,0
 phis_gryo=[0]
 thetas_gyro=[0]
 psis_gyro=[0]
-acc_val=[]
+acc_value=[]
 sensor_value=[]
+kf_value=[]
+gyro_value=[]
 
 while len(phis)<600:
     Ax,Ay,Az,Gx,Gy,Gz=sensor.read_value()
-    sensor_value.append(Ax,Ay,Az,Gx,Gy,Gz)
+    sensor_value.append([Ax,Ay,Az,Gx,Gy,Gz])
     
 
     kf.A=np.eye(4)+dt*1/2*np.array([
@@ -43,14 +45,12 @@ while len(phis)<600:
     phi_gyro,theta_gyro,psi_gyro=np.array([[1,np.sin(phi_gyro)*np.tan(theta_gyro),np.cos(phi_gyro)*np.tan(theta_gyro)],
                         [0,np.cos(phi_gyro),-np.sin(phi_gyro)],
                         [0,np.sin(phi_gyro)/np.cos(theta_gyro),np.cos(phi_gyro)/np.cos(theta_gyro)]])@np.vstack([Gx,Gy,Gz])[:,0]*dt+np.array([phi_gyro,theta_gyro,psi_gyro])
-    phis_gryo.append(phi_gyro)
-    thetas_gyro.append(theta_gyro)
-    psis_gyro.append(psi_gyro)
+    gyro_value.append([phi_gyro,theta_gyro,psi_gyro])
     
     theta=np.arctan(Ay/Az)
     phi=np.arctan(Ax/np.sqrt(Ay**2+Az**2))
     psi=0
-    acc_val.append([theta,phi,psi])
+    acc_value.append([theta,phi,psi])
     
     cosphi=np.cos(phi/2)
     costhe=np.cos(theta/2)
@@ -69,28 +69,27 @@ while len(phis)<600:
     phi=np.arctan2(2*(x[2]*x[3]+x[0]*x[1]),1-2*(x[1]**2+x[2]**2))
     theta=-np.arcsin(2*(x[1]*x[3]-x[0]*x[2]))
     psi=np.arctan2(2*(x[1]*x[2]+x[0]*x[3]),1-2*(x[2]**2+x[3]**2))
-    phis=np.append(phis,phi,axis=0)
-    thetas=np.append(thetas,theta,axis=0)
-    psis=np.append(psis,psi,axis=0)
+    kf_value.append([phi,theta,psi])
+    print(f'{phi}  {theta}  {psi}')
+
+    plt.figure(1)
+    plt.subplot(3,1,1)
+    plt.title('phi')
+    plt.plot(euler[0])
+    plt.plot(gyro[0])
+    plt.subplot(3,1,2)
+    plt.title('theta')
+    plt.plot(euler[1])
+    plt.plot(gyro[1])
+    plt.subplot(3,1,3)
+    plt.title('psi')
+    plt.plot(euler[2])
+    plt.plot(gyro[2])
+    plt.pause(0.1)
     sleep(dt)
     
-euler=np.vstack([phis,thetas,psis]) 
-gyro=np.vstack([phis_gryo,thetas_gyro,psis_gyro])
 np.savetxt("euler.csv",euler,delimiter=',')
 np.savetxt("gyro.csv",gyro,delimiter=',')
 np.savetxt("sensor.csv",np.array(sensor_value),delimiter=',')
 
-plt.figure(1)
-plt.subplot(3,1,1)
-plt.title('phi')
-plt.plot(euler[:,0])
-plt.plot(gyro[:,0])
-plt.subplot(3,1,2)
-plt.title('theta')
-plt.plot(euler[:,1])
-plt.plot(gyro[:,1])
-plt.subplot(3,1,3)
-plt.title('psi')
-plt.plot(euler[:,2])
-plt.plot(gyro[:,2])
-plt.show()
+
