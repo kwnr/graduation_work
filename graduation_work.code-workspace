@@ -2,24 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "study"
-		},
-		{
-			"path": "sensor_fusion"
-		},
-		{
-			"path": "kalman_filter"
-		},
-		{
-			"path": "aruco_detection"
-		},
-		{
-			"path": "arrow_pose_estimation"
-		},
-		{
-			"path": "arrow_detecting"
 		}
 	],
 	"settings": {}
