@@ -6,15 +6,16 @@
 # Generated: Mon May 30 18:44:29 2016
 ##################################################
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import ctypes
     import sys
-    if sys.platform.startswith('linux'):
+
+    if sys.platform.startswith("linux"):
         try:
-            x11 = ctypes.cdll.LoadLibrary('libX11.so')
+            x11 = ctypes.cdll.LoadLibrary("libX11.so")
             x11.XInitThreads()
         except:
-            print "Warning: failed to XInitThreads()"
+            print("Warning: failed to XInitThreads()")
 
 from gnuradio import blocks
 from gnuradio import digital
@@ -27,7 +28,8 @@ from grc_gnuradio import wxgui as grc_wxgui
 from optparse import OptionParser
 import osmosdr
 import time
-#import wx
+
+# import wx
 from gnuradio import blocks
 from gnuradio import eng_notation
 from gnuradio import gr
@@ -36,8 +38,8 @@ from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from optparse import OptionParser
 
-class top_block(gr.top_block):
 
+class top_block(gr.top_block):
     def __init__(self):
         gr.top_block.__init__(self, "Gfsk")
 
@@ -49,7 +51,7 @@ class top_block(gr.top_block):
         self.rf_gain = rf_gain = 0
         self.if_gain = if_gain = 20
         self.fsk_deviation_hz = fsk_deviation_hz = 170000
-        self.fc = fc = 2400000000+ch*1000000
+        self.fc = fc = 2400000000 + ch * 1000000
         self.bw = bw = samp_rate
         self.bitrate = bitrate = 250000
         self.bb_gain = bb_gain = 30
@@ -57,7 +59,7 @@ class top_block(gr.top_block):
         ##################################################
         # Blocks
         ##################################################
-        self.osmosdr_sink_0 = osmosdr.sink( args="numchan=" + str(1) + " " + "" )
+        self.osmosdr_sink_0 = osmosdr.sink(args="numchan=" + str(1) + " " + "")
         self.osmosdr_sink_0.set_sample_rate(samp_rate)
         self.osmosdr_sink_0.set_center_freq(fc, 0)
         self.osmosdr_sink_0.set_freq_corr(0, 0)
@@ -66,23 +68,49 @@ class top_block(gr.top_block):
         self.osmosdr_sink_0.set_bb_gain(bb_gain, 0)
         self.osmosdr_sink_0.set_antenna("", 0)
         self.osmosdr_sink_0.set_bandwidth(samp_rate, 0)
-          
+
         self.digital_gfsk_mod_0 = digital.gfsk_mod(
-        	samples_per_symbol=samp_rate/bitrate,
-        	sensitivity=0.5,
-        	bt=0.5,
-        	verbose=False,
-        	log=False,
+            samples_per_symbol=samp_rate / bitrate,
+            sensitivity=0.5,
+            bt=0.5,
+            verbose=False,
+            log=False,
         )
-        self.blocks_vector_source_x_1 = blocks.vector_source_b([0x00, 0xaa, 0xa2, 0x00, 0x09, 0x89, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x95, 0x7f, 0x1e]+ [0x00]*100, True, 1, [])
+        self.blocks_vector_source_x_1 = blocks.vector_source_b(
+            [
+                0x00,
+                0xAA,
+                0xA2,
+                0x00,
+                0x09,
+                0x89,
+                0x0F,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x40,
+                0x00,
+                0x00,
+                0x00,
+                0x95,
+                0x7F,
+                0x1E,
+            ]
+            + [0x00] * 100,
+            True,
+            1,
+            [],
+        )
         (self.blocks_vector_source_x_1).set_min_output_buffer(0)
         (self.blocks_vector_source_x_1).set_max_output_buffer(0)
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.blocks_vector_source_x_1, 0), (self.digital_gfsk_mod_0, 0))    
-        self.connect((self.digital_gfsk_mod_0, 0), (self.osmosdr_sink_0, 0))    
+        self.connect((self.blocks_vector_source_x_1, 0), (self.digital_gfsk_mod_0, 0))
+        self.connect((self.digital_gfsk_mod_0, 0), (self.osmosdr_sink_0, 0))
 
     def get_samp_rate(self):
         return self.samp_rate
@@ -98,7 +126,7 @@ class top_block(gr.top_block):
 
     def set_ch(self, ch):
         self.ch = ch
-        self.set_fc(2400000000+self.ch*1000000)
+        self.set_fc(2400000000 + self.ch * 1000000)
         self._ch_slider.set_value(self.ch)
         self._ch_text_box.set_value(self.ch)
 
@@ -155,12 +183,12 @@ class top_block(gr.top_block):
         self.osmosdr_sink_0.set_bb_gain(self.bb_gain, 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tb = top_block()
     tb.start()
-    tb.blocks_vector_source_x_1.set_data([0x00, 0xaa, 0x00])
-    tb.blocks_vector_source_x_1.set_data([0x00, 0xaa, 0x11])
-    tb.blocks_vector_source_x_1.set_data([0x00, 0xaa, 0x22])
-    raw_input('Press Enter to quit: ')
+    tb.blocks_vector_source_x_1.set_data([0x00, 0xAA, 0x00])
+    tb.blocks_vector_source_x_1.set_data([0x00, 0xAA, 0x11])
+    tb.blocks_vector_source_x_1.set_data([0x00, 0xAA, 0x22])
+    raw_input("Press Enter to quit: ")
     tb.stop()
     tb.wait()
