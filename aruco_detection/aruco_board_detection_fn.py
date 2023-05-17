@@ -42,9 +42,9 @@ class Detector():
     def run(self,draw=False):
         _,img=self.cap.read()
         img=self.preprocessing(img)
-        objp,imgp=self.detect_match_marker(img)
-        if objp is not None:
-            self.rvec,self.tvec=self.solve_pnp(objp,imgp)
+        self.objp,self.imgp=self.detect_match_marker(img)
+        if self.objp is not None:
+            self.rvec,self.tvec=self.solve_pnp(self.objp,self.imgp)
             if draw:
                 cv2.aruco.drawDetectedMarkers(img,self.corners,self.ids)
                 cv2.drawFrameAxes(img,self.camera_matrix,self.dist_coeffs,self.rvec,self.tvec,100)

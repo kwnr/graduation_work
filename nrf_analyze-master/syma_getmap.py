@@ -52,7 +52,7 @@ if __name__ == "__main__":
     else:
         t = sys.argv[1]
 
-    s = [ord(i) for i in t.decode('hex')[-1::-1]]
-    print s
+    s = [ord(chr(int(t[2*i:2*i+2],16))) for i in range(5)]
+    print (s)
     symax_init2(s)
-    print re.sub(r'\[(.*)\]', r'\1',str(chans).replace(' ',''))
+    print (re.sub(r'\[(.*)\]', r'\1',str(chans).replace(' ','')))

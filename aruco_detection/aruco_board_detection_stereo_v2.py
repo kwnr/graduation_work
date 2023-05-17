@@ -24,6 +24,13 @@ while cap1.isOpened():
     rvec1,tvec1,img1=det1.run(draw=True)
     rvec2,tvec2,img2=det2.run(draw=True)
     img=np.hstack((img1,img2))
+
+    imgp1=det1.imgp
+    imgp2=det2.imgp
+    
+        
+    
+    
     cv2.imshow('img',img)
     if cv2.waitKey(1) & 0xFF==ord('q'):
         break
