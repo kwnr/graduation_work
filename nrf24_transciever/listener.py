@@ -12,6 +12,8 @@ class symaRX(threading.Thread):
         self.addr=[0xab,0xac,0xad,0xae,0xaf]
         self.address=int(''.join([hex(self.addr[3-i])[2:] for i in range(5)]),16)
         self.available=False
+
+        self.packet=[0]*10
         
     def to_pointer(self,hex_list):
         return int(''.join([hex(hex_list[3-i])[2:] for i in range(5)]),16)
@@ -47,10 +49,10 @@ class symaRX(threading.Thread):
             self.available=True
             
     def read(self):
-        packet=[0]*10
         for i in range(10):
-            packet[i]=self.data[i]
+            self.packet[i]=self.data[i]
         self.available=False
+        return self.packet
         
     def checksum(self,packet):
         sum=packet[0]
@@ -62,9 +64,9 @@ class symaRX(threading.Thread):
     def set_channel(self):
         tx0=self.addr[0]
         num_rf_channels=4
-        start1 = [0x0a, 0x1a, 0x2a, 0x3a];
-        start2 = [0x2a, 0x0a, 0x42, 0x22];
-        start3 = [0x1a, 0x3a, 0x12, 0x32];
+        start1 = [0x0a, 0x1a, 0x2a, 0x3a]
+        start2 = [0x2a, 0x0a, 0x42, 0x22]
+        start3 = [0x1a, 0x3a, 0x12, 0x32]
         if tx0 < 0x10:
             if tx0 == 6:
                 tx0 = 7
@@ -96,9 +98,10 @@ radio.setPALevel(RF24_PA_HIGH)
 radio.setPayloadSize(10)
 
 rx.init(radio)
+packet=[]
 
 while True:
     rx.run(radio)
     if rx.available:
-        packet=rx.read()
-    print(packet)
+        rx.read()
+    print(rx.packet)
