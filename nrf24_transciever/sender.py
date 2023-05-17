@@ -1,6 +1,7 @@
 import time
 from pyrf24.rf24 import *
 import threading
+import sys
 ADDRESS_LEN=5
 BIND_CHANNEL=9
 class symaTX(threading.Thread):
@@ -12,7 +13,8 @@ class symaTX(threading.Thread):
         self.pipes=[0xafaeadacab, self.address]
         for i in range(ADDRESS_LEN):
             self.rx_tx_addr[ADDRESS_LEN-1-i]=ord(chr(int(addr[2*i:2*i+2],16)))
-        self.chans=self.set_channel()
+        self.chans=[0]*4
+        self.set_channel()
         self.ch=0
         self.chans_count=len(self.chans)
         self.packet_size=10
@@ -26,12 +28,12 @@ class symaTX(threading.Thread):
         print(f'Channels: {self.chans}')
         
         try:
-            self.radio = RF24(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_8MHZ)
+            self.radio = RF24(25, 0)
             self.setup()
             pass
         except:
             print ("Error. No nrf module")
-            exit(0)
+            sys.exit(0)
             
     def setup(self):
         self.radio.begin()
@@ -44,7 +46,7 @@ class symaTX(threading.Thread):
         self.radio.openWritingPipe(self.pipes[0])
         
     def set_channel(self):
-        tx0=self.addr[0]
+        tx0=self.rx_tx_addr[0]
         start1=[0x0a,0x1a,0x2a,0x3a]
         start2=[0x2a,0x0a,0x42,0x22]
         start3=[0x1a,0x3a,0x12,0x32]
@@ -57,21 +59,21 @@ class symaTX(threading.Thread):
             if tx0==0x06:
                 tx0=0x07
             for i in range(4):
-                self.channels[i]=start1[i]+tx0
+                self.chans[i]=start1[i]+tx0
         elif tx0<0x18:
             for i in range(4):
-                self.channels[i]=start2[i]+(tx0&0x07)
+                self.chans[i]=start2[i]+(tx0&0x07)
             if tx0==0x16:
-                self.channels[0]+=0x01
-                self.channels[1]+=0x01
+                self.chans[0]+=0x01
+                self.chans[1]+=0x01
                 
         elif tx0<0x1e:
             for i in range(4):
-                self.channels[i]=start3[i]+(tx0&0x07)
+                self.chans[i]=start3[i]+(tx0&0x07)
         elif tx0==0x1e:
-            self.channels= [0x21, 0x41, 0x18, 0x38]
+            self.chans= [0x21, 0x41, 0x18, 0x38]
         else:
-            self.channels[0x21, 0x41, 0x19, 0x39]
+            self.chans[0x21, 0x41, 0x19, 0x39]
             
                 
     
@@ -92,12 +94,12 @@ class symaTX(threading.Thread):
             self.packet[2]=self.direction[2]
             self.packet[3]=self.direction[3]
             self.packet[4]=0x00
-            self.packet[5]=(self.data[1]>>2)|0xc0
-            self.packet[6]=(self.data[2]>>2)
-            self.packet[7]=(self.data>>2)
+            self.packet[5]=(self.packet[1]>>2)|0xc0
+            self.packet[6]=(self.packet[2]>>2)
+            self.packet[7]=(self.packet[3]>>2)
             self.packet[8]=0x00
 
-        self.data[9]=self.checksum(self.data)
+        self.packet[9]=self.checksum(self.packet)
     
     def run(self):
         while self.running:
@@ -131,10 +133,10 @@ class controller(threading.Thread):
         
     def run(self):
         while(True):
-            input='asdf'
             self.syma.direction[0]=10
     
 
 
 if __name__=="__main__":
     tx=symaTX('a20009890f')
+    tx.run()
