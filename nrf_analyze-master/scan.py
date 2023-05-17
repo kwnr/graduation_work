@@ -6,7 +6,7 @@ import threading
 import time
 import operator
 
-from RF24 import *
+from pyrf24.rf24 import *
 import RPi.GPIO as GPIO
 
 import select
@@ -49,7 +49,7 @@ payload_size = 32
 channel = 9
 aack = False
 
-radio = RF24(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_8MHZ)
+radio = RF24(25, 0)
 radio.begin()
 radio.setChannel(channel)
 radio.setPALevel(RF24_PA_MAX)
@@ -142,7 +142,7 @@ try:
             #    pass
         while radio.available():
             data = radio.read(payload_size)
-            hex_data = str(data).encode("hex")
+            hex_data = ''.join([str(hex(data[i]))[2:] for i in range(len(data))])
             print(hex_data)
             try:
                 num = hex(channel) + " " + hex_data[0:10]

@@ -2,14 +2,13 @@ from pyrf24.rf24 import *
 import threading
 import time
 
-class symaRX(threading.Thread):
+class symaRX():
     def __init__(self):
-        super().__init__()
         self.bound=False
         self.channels=[0x4b,0x30,0x40,0x20]
         self.current_channel=0
         
-        self.addr=[0xab,0xac,0xad,0xae,0xaf]
+        self.addr=[0x80,0x80,0x80,0x80,0xa2]
         self.address=int(''.join([hex(self.addr[3-i])[2:] for i in range(5)]),16)
         self.available=False
 
@@ -32,10 +31,12 @@ class symaRX(threading.Thread):
         radio.startListening()
         if not radio.available():
             if self.curr_rx_time-self.prev_rx_time>16:
+                print('elasped',self.curr_rx_time-self.prev_rx_time)
                 self.current_channel+=1
                 self.current_channel%=4
                 radio.setChannel(self.channels[self.current_channel])
                 self.prev_rx_time=self.curr_rx_time
+                print(self.current_channel)
         else:
             self.data=radio.read(10)
             if not self.bound:
@@ -96,7 +97,8 @@ radio.setRetries(15,15)
 radio.setDataRate(RF24_250KBPS)
 radio.setPALevel(RF24_PA_HIGH)
 radio.setPayloadSize(10)
-
+radio.disableCRC()
+time.sleep(5)
 rx.init(radio)
 packet=[]
 
@@ -104,4 +106,5 @@ while True:
     rx.run(radio)
     if rx.available:
         rx.read()
-    print(rx.packet)
+        print(rx.packet)
+    time.sleep(0.001)
