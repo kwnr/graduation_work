@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import pickle
 
-cap=cv2.VideoCapture(0)
+cap=cv2.VideoCapture(1)
 aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
 with open('../camera_matrix.pkl','rb') as f:
     camera_matrix,dist_coeffs=pickle.load(f)
@@ -15,6 +15,7 @@ board=cv2.aruco.GridBoard([2,2],100,20,aruco_dict,ids=np.array([1,11,21,31]))
 
 while cap.isOpened():
     _,img=cap.read()
+    img=np.concatenate((img,img),1)
     img_copy=img.copy()
     
     corners,ids,_=detector.detectMarkers(img)
