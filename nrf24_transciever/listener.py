@@ -10,12 +10,15 @@ class symaRX(threading.Thread):
         self.current_channel=0
         
         self.addr=[0xab,0xac,0xad,0xae,0xaf]
+        self.address=int(''.join([hex(self.addr[3-i])[2:] for i in range(5)]),16)
         self.available=False
         
+    def to_pointer(self,hex_list):
+        return int(''.join([hex(hex_list[3-i])[2:] for i in range(5)]),16)
         
     def init(self,radio:RF24):
         radio.setChannel(self.channels[0])
-        radio.openReadingPipe(1,self.addr)
+        radio.openReadingPipe(1,self.to_pointer(self.addr))
         radio.flush_rx()
         radio.startListening()
         self.prev_rx_time=time.time()*1000
@@ -23,7 +26,7 @@ class symaRX(threading.Thread):
     def run(self,radio:RF24):
         self.curr_rx_time=time.time()*1000
         radio.setChannel(self.channels[self.current_channel])
-        radio.openReadingPipe(1,self.addr)
+        radio.openReadingPipe(1,self.to_pointer(self.addr))
         radio.startListening()
         if not radio.available():
             if self.curr_rx_time-self.prev_rx_time>16:
@@ -39,7 +42,7 @@ class symaRX(threading.Thread):
                         self.addr[i]=self.data[4-i]
                     self.set_channel()
                     radio.setChannel(self.channels[self.current_channel])
-                    radio.openReadingPipe(1,self.addr)
+                    radio.openReadingPipe(1,self.to_pointer(self.addr))
                     self.bound=True
             self.available=True
             
