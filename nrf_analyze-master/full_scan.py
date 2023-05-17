@@ -19,7 +19,7 @@ CHANNELS = range(25, 26)
 
 TIME = 10
 
-radio = RF24(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_8MHZ)
+radio = RF24(25, 0)
 
 radio.begin()
 radio.setChannel(9)
