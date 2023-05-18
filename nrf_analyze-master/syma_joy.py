@@ -102,7 +102,7 @@ class Syma(threading.Thread):
 
         try:
             self.radio = RF24(
-                RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_8MHZ
+                25,0
             )
             self.setup()
             pass
@@ -254,8 +254,10 @@ class App(threading.Thread):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
+    """    if len(sys.argv) > 1:
         app = App(address=sys.argv[1])
     else:
         app = App(address="a20009890f")
-    app.start()
+    app.start()"""
+    syma=Syma(address="a20009890f")
+    syma.run()
