@@ -172,12 +172,16 @@ class main(threading.Thread):
             cc=0
             if self.det1.imgp is not None:
                 M1=cv2.moments(imgp1)
-                c1=[M1['m10']/M1['m00'],M1['m01']/M1['m00']]
-                cv2.circle(img1,np.int32(c1),3,(0,0,255),-1)
+                c+=[M1['m10']/M1['m00'],M1['m01']/M1['m00']]
+                cc+=1
             if self.det2.imgp is not None:
                 M2=cv2.moments(imgp2)
-                c2=[M2['m10']/M2['m00'],M2['m01']/M2['m00']]
-                cv2.circle(img2,np.int32(c2),3,(0,0,255),-1)    
+                c+=[M2['m10']/M2['m00'],M2['m01']/M2['m00']]
+                cc+=1
+            if cc!=0:
+                c=c/cc
+                cv2.circle(img1,np.int32(c),3,(255,0,0),-1)
+                cv2.circle(img2,np.int32(c),3,(255,0,0),-1)
             
             
             
