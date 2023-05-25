@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import pickle
 
-cap=cv2.VideoCapture(1)
+cap=cv2.VideoCapture(0)
 aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
 with open('../camera_matrix.pkl','rb') as f:
     camera_matrix,dist_coeffs=pickle.load(f)

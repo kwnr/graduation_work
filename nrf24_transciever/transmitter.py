@@ -7,7 +7,8 @@ class symaTX(threading.Thread):
         super().__init__()
         
         self.bound=False
-        self.channels=[0x4b,0x30,0x40,0x20]
+        self.channels=[22, 38, 54, 70]
+        self.chan_len=len(self.channels)
         self.current_channel=0
         self.channel_counter=0
         self.addr=[0xab,0xac,0xad,0xae,0xaf]
@@ -22,78 +23,53 @@ class symaTX(threading.Thread):
         
         self.running=True
         
-    def init2(self,tx_addr):
+    def init2(self):
         self.radio.stopListening()
         self.radio.setChannel(self.channels[0])
         self.radio.openWritingPipe(bytes(self.addr))
         for i in range(5):
-            self.data[i]=tx_addr[i]
+            self.data[i]=self.addr[4-i]
         for i in range(3):
             self.data[i+5]=0xaa
         self.data[8]=0
         self.data[9]=self.checksum(self.data)
-        print(self.data)
         tstart=time.monotonic()
-        timeout=5
-        while time.monotonic()-tstart<timeout:
-            self.transmit()
+        while time.monotonic()-tstart<1.4:
+            self.bind()
             print(self.data)
-        
-        self.addr=tx_addr
         self.build_packet()
-        self.set_channel()
         self.radio.openWritingPipe(bytes(self.addr))
         self.bound=True
         
     def build_packet(self):
         self.data[0]=self.throttle
         self.data[1]=self.pitch
-        self.data[2]=self.roll
-        self.data[3]=self.yaw
+        self.data[2]=self.yaw
+        self.data[3]=self.roll
         self.data[4]=0
-        self.data[5]=(self.data[1]>>2)|0xc0
-        self.data[6]=(self.data[2]>>2)
-        self.data[7]=(self.data[3]>>2)
-        self.data[8]=0x00
+        self.data[5]=70
+        self.data[6]=32
+        self.data[7]=19
+        self.data[8]=129
         self.data[9]=self.checksum(self.data)
             
-    def transmit(self):
+    def bind(self):
         self.radio.setChannel(self.channels[self.current_channel])
         self.radio.write(bytes(self.data),False)
         self.channel_counter+=1
         if self.channel_counter%2==0:
             self.current_channel+=1
-            self.current_channel=self.current_channel%4
+            self.current_channel=self.current_channel%self.chan_len
             self.channel_counter=0
             
-    
+    def transmit(self):
+        for i in range(self.chan_len):
+            self.radio.setChannel(self.channels[i])
+            self.radio.write(bytes(self.data),False)
+            print(self.channels[i],self.data)
+            time.sleep(0.4e-3)
             
     
-    def set_channel(self):
-        tx0=self.addr[0]
-        num_rf_channels=4
-        start1 = [0x0a, 0x1a, 0x2a, 0x3a]
-        start2 = [0x2a, 0x0a, 0x42, 0x22]
-        start3 = [0x1a, 0x3a, 0x12, 0x32]
-        tx0&=0x1f
-        if tx0 < 0x10:
-            if tx0 == 6:
-                tx0 = 7
-            for i in range(num_rf_channels):
-                self.channels[i] = start1[i] + tx0
-        elif tx0 < 0x18:
-            for i in range(num_rf_channels):
-                self.channels[i] = start2[i] + (tx0 & 0x07)
-            if tx0 == 0x16:
-                self.channels[0] += 1
-                self.channels[1] += 1
-        elif tx0 < 0x1E:
-            for i in range(num_rf_channels):
-                self.channels[i] = start3[i] + (tx0 & 0x07)
-        elif tx0 == 0x1E:
-            self.channels=[0x21, 0x41, 0x18, 0x38]
-        else:
-            self.channels=[0x21, 0x41, 0x19, 0x39]
     
     def checksum(self,packet):
         sum=packet[0]
@@ -107,8 +83,8 @@ class symaTX(threading.Thread):
         while self.running:
             if self.bound:
                 self.build_packet()
-                print(self.data)
                 self.transmit()
+            time.sleep(0.00001)
         
     
 class controller(threading.Thread):
@@ -122,26 +98,42 @@ class controller(threading.Thread):
         self.tx.radio.setDataRate(RF24_250KBPS)
         self.tx.radio.setPALevel(RF24_PA_HIGH)
         self.tx.radio.setPayloadSize(10)
-        time.wait(0.015)
+        time.sleep(0.015)
     
-        self.tx.init2([161, 105, 1, 104, 204])
+        addr=[161, 105, 1, 104, 204]
+        addr.reverse()
+        self.tx.addr=addr
+        self.tx.init2()
         self.tx.start()
         
+    def run(self):
+        #simple up down
+        start_time=time.monotonic()
+        self.tx.throttle=0
+        self.tx.pitch=255
+        self.tx.roll=127
+        self.tx.yaw=255
+        while True:
+            key=input("tpyr:valuem(ex: t:255)")
+            key=key.split(":")
+            if key[0]=='t':
+                self.tx.throttle=key[1]
+            elif key[0]=='p':
+                self.tx.pitch=key[1]
+            elif key[0]=='y':
+                self.tx.yaw=key[1]
+            elif key[0]=='r':
+                self.tx.roll=key[1]
+                
+        
+        
+#    def get_control(self):
+#        key=
+        
 if __name__=="__main__":
-    tx=symaTX()
-    tx=symaTX()
-    tx.radio.begin()
-    tx.radio.setAutoAck(False)
-    tx.radio.setAddressWidth(5)
-    tx.radio.setRetries(15,15)
-    tx.radio.setDataRate(RF24_250KBPS)
-    tx.radio.setPALevel(RF24_PA_HIGH)
-    tx.radio.setPayloadSize(10)
-    time.sleep(0.015)
-
-    tx.init2([161, 105, 1, 104, 204])
+    c=controller()
+    c.run()
     
-    tx.run()
     
             
     

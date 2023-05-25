@@ -8,9 +8,8 @@ sys.path.append('..')
 
 # External Imports
 pass
-
 # Custom Imports
-from PyComms.pycomms import PyComms
+from pycomms import PyComms
 
 class MPU6050:
     # Register map based on Jeff Rowberg <jeff@rowberg.net> source code at

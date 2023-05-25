@@ -41,6 +41,7 @@ class Detector():
     
     def run(self,draw=False):
         _,img=self.cap.read()
+        img=cv2.rotate(img,cv2.ROTATE_180)
         img=self.preprocessing(img)
         self.objp,self.imgp=self.detect_match_marker(img)
         if self.objp is not None:

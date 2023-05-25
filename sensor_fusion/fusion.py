@@ -71,25 +71,30 @@ while len(phis)<600:
     psi=np.arctan2(2*(x[1]*x[2]+x[0]*x[3]),1-2*(x[2]**2+x[3]**2))
     kf_value.append([phi,theta,psi])
     print(f'{phi}  {theta}  {psi}')
-
-    plt.figure(1)
-    plt.subplot(3,1,1)
-    plt.title('phi')
-    plt.plot(euler[0])
-    plt.plot(gyro[0])
-    plt.subplot(3,1,2)
-    plt.title('theta')
-    plt.plot(euler[1])
-    plt.plot(gyro[1])
-    plt.subplot(3,1,3)
-    plt.title('psi')
-    plt.plot(euler[2])
-    plt.plot(gyro[2])
-    plt.pause(0.1)
-    sleep(dt)
     
-np.savetxt("euler.csv",euler,delimiter=',')
-np.savetxt("gyro.csv",gyro,delimiter=',')
-np.savetxt("sensor.csv",np.array(sensor_value),delimiter=',')
+phi_euler=[kf_value[i][0][0] for i in range(len(kf_value))]
+theta_euler=[kf_value[i][1][0] for i in range(len(kf_value))]
+psi_euler=[kf_value[i][2][0] for i in range(len(kf_value))]
+phi_gyro=[gyro_value[i][0] for i in range(len(gyro_value))]
+theta_gyro=[gyro_value[i][1] for i in range(len(gyro_value))]
+psi_gyro=[gyro_value[i][2] for i in range(len(gyro_value))]
+
+plt.figure(1)
+plt.subplot(3,1,1)
+plt.title('phi')
+plt.plot(phi_euler)
+plt.plot(phi_gyro)
+plt.legend(['kf','gyro'])
+plt.subplot(3,1,2)
+plt.title('theta')
+plt.plot(theta_euler)
+plt.plot(theta_gyro)
+plt.legend(['kf','gyro'])
+plt.subplot(3,1,3)
+plt.title('psi')
+plt.plot(psi_euler)
+plt.plot(psi_gyro)
+plt.legend(['kf','gyro'])
+plt.savefig('fusion.png')
 
 
