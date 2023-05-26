@@ -30,7 +30,7 @@ while cap1.isOpened():
     
         
     
-    
+    print(f'{tvec1.T}\n{tvec2.T}\n')
     cv2.imshow('img',img)
     if cv2.waitKey(1) & 0xFF==ord('q'):
         break

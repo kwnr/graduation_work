@@ -24,7 +24,7 @@ cap2.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
 
 
 aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
-with open('camera_matrix.pkl','rb') as f:
+with open('../camera_matrix.pkl','rb') as f:
     camera_matrix,dist_coeffs=pickle.load(f)
     
 
