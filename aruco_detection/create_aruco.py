@@ -17,7 +17,7 @@ def draw_charuco_board(dict,size,out_size,margin,square_length,marker_length,ids
 
 if __name__=="__main__":
     aruco_dict=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
-    img=draw_aruco_board(aruco_dict,[2,2],[1000,1000],0.1,0.02,np.array([1,11,21,31]),margin=50)
+    img=draw_aruco_board(aruco_dict,[2,2],np.array([100//0.26,100//0.26],np.int32),0.045,0.010,np.array([1,11,21,31]),margin=0)
     cv2.imwrite('aruco_board.png',img)
     cv2.imshow("aruco",img)
     cv2.waitKey(0)

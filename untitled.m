@@ -32,6 +32,8 @@ B=[
     0,0,0,0;
     0,0,0,1/Iz;
     ];
+
+
 C=[
     1,0,0,0,0,0,0,0,0,0,0,0;
     0,1,0,0,0,0,0,0,0,0,0,0;
@@ -46,7 +48,7 @@ sys=ss(A,B,C,D);
 Q=eye(12);
 
 R=eye(4);
-K=lqr(sys,Q,R);
+%K=lqr(sys,Q,R);
 sys_c=ss(A-B*K,B,C,D);
 
 x=zeros(12,1);
@@ -74,7 +76,9 @@ for t=tspan
     u(2)=max(min(u(2),10),-10);
     u(3)=max(min(u(3),10),-10);
     u(4)=max(min(u(4),10),-10);
-    xd=A*x+B*u;
+ 
+    xd=A*x+B1*u;
+    
     xd(2)=xd(2)-g;
     x=x+0.01*xd;
     us(:,int32(t*100+1))=u;

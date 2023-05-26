@@ -7,8 +7,8 @@ import pickle
 
 criteria=(cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-objp=np.zeros((9*6,3),np.float32)
-objp[:,:2]=np.mgrid[0:9,0:6].T.reshape(-1,2)
+objp=np.zeros((8*5,3),np.float32)
+objp[:,:2]=np.mgrid[0:8,0:5].T.reshape(-1,2)
 
 objpoints=[]
 imgpoints=[]
@@ -19,14 +19,14 @@ for image in images:
     img=cv2.imread(image)
     gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     
-    ret,corners=cv2.findChessboardCorners(gray,(9,6),None,cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_NORMALIZE_IMAGE+cv2.CALIB_CB_FAST_CHECK)
+    ret,corners=cv2.findChessboardCorners(gray,(8,5),None,cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_NORMALIZE_IMAGE+cv2.CALIB_CB_FAST_CHECK)
  
     
     if ret:
         objpoints.append(objp)
         corners2=cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
         imgpoints.append(corners2)
-        cv2.drawChessboardCorners(img,(9,6),corners2,ret)
+        cv2.drawChessboardCorners(img,(8,5),corners2,ret)
 ret,mtx,dist,rvecs,tvecs=cv2.calibrateCamera(objpoints,imgpoints,gray.shape[::-1],None,None)
 f=open('camera_matrix.pkl','wb')
 pickle.dump([mtx,dist],f)
