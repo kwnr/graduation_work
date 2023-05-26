@@ -95,7 +95,7 @@ class main(threading.Thread):
     def __init__(self):
         super().__init__()
         
-        self.capL=cv2.VideoCapture(0)
+        self.capL=cv2.VideoCapture(-1)
         self.capR=cv2.VideoCapture(2)
 
         w=640
@@ -206,6 +206,7 @@ class main(threading.Thread):
         self.K,S,E=control.lqr(self.A,self.B,Q,R)
         self.state_des=np.zeros((12,1))
         self.state=np.zeros((12,1))
+        self.state[0]=10
         self.tspan=[]
         self.throts=[]
     
@@ -248,6 +249,16 @@ class main(threading.Thread):
         
     def run(self):
         prev_time=time.monotonic()
+        while time.monotonic()-prev_time<5:
+            self.tx.throttle=0
+            self.tx.pitch=255
+            self.tx.roll=127
+            self.tx.yaw=255
+        while time.monotonic()-prev_time<10:
+            self.tx.throttle=130
+            self.tx.pitch=0
+            self.tx.roll=0
+            self.tx.yaw=0
         while True:
             rvecL,tvecL,imgL=self.detL.run(draw=True)
             rvecR,tvecR,imgR=self.detR.run(draw=True)
@@ -318,10 +329,10 @@ class main(threading.Thread):
             #self.tx.pitch=u[3][0]
             self.tspan.append(curr_time)
             self.throts.append(self.tx.throttle)
-            img=np.hstack((imgL,imgR))
+            #img=np.hstack((imgL,imgR))
             
             print(f"\ndt:{dt}\npt:{pt}\n sig:{[self.tx.throttle,self.tx.pitch,self.tx.yaw,self.tx.roll]}\nstate:{self.state.T}\nstate_des:{self.state_des.T}")
-            cv2.imshow('img',img)
+            #cv2.imshow('img',img)
             if cv2.waitKey(1) & 0xFF==ord('q'):
                 cv2.destroyAllWindows()
                 self.capL.release()
