@@ -33,8 +33,15 @@ while True:
         _,imgR=capR.read()
         imgL=cv2.rotate(imgL,cv2.ROTATE_180)
         imgR=cv2.rotate(imgR,cv2.ROTATE_180)
+        grayL=cv2.cvtColor(imgL,cv2.COLOR_BGR2GRAY)
+        grayR=cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
+        retL,cornersL=cv2.findChessboardCorners(grayL,(8,5),None,cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_NORMALIZE_IMAGE+cv2.CALIB_CB_FAST_CHECK)
+        retR,cornersR=cv2.findChessboardCorners(grayR,(8,5),None,cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_NORMALIZE_IMAGE+cv2.CALIB_CB_FAST_CHECK)
+        cv2.drawChessboardCorners(imgL,(8,5),cornersL,retL)
+        cv2.drawChessboardCorners(imgR,(8,5),cornersR,retR)
         
         img=np.hstack((imgL,imgR))
+        
         cv2.imshow('img',img)
         key=cv2.waitKey(1)&0xFF
         if key==ord('q'):

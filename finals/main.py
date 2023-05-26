@@ -11,6 +11,7 @@ from numpy import sin
 from numpy import cos
 from numpy import tan
 import control
+import pickle
 
 global phi,psi,theta
 
@@ -71,19 +72,38 @@ class gyro(threading.Thread):
             self.psi_kf=np.arctan2(2*(x[1]*x[2]+x[0]*x[3]),1-2*(x[2]**2+x[3]**2))
             time.sleep(self.dt)
 
+class LowPassFilter(object):
+    def __init__(self, cut_off_freqency, ts):
+    	# cut_off_freqency: 차단 주파수
+        # ts: 주기
+        
+        self.ts = ts
+        self.cut_off_freqency = cut_off_freqency
+        self.tau = self.get_tau()
+
+        self.prev_data = 0.
+        
+    def get_tau(self):
+        return 1 / (2 * np.pi * self.cut_off_freqency)
+
+    def filter(self, data):
+        val = (self.ts * data + self.tau * self.prev_data) / (self.tau + self.ts)
+        self.prev_data = val
+        return val
+
 class main(threading.Thread):
     def __init__(self):
         super().__init__()
         
-        capL=cv2.VideoCapture(0)
-        capR=cv2.VideoCapture(2)
+        self.capL=cv2.VideoCapture(0)
+        self.capR=cv2.VideoCapture(2)
 
         w=640
         h=480
         fps=10
 
-        self.detL=Detector(capL)
-        self.detR=Detector(capR)
+        self.detL=Detector(self.capL)
+        self.detR=Detector(self.capR)
 
         self.detL.set_cap_frame_size(w,h)
         self.detR.set_cap_frame_size(w,h)
@@ -111,7 +131,40 @@ class main(threading.Thread):
         self.mpu.start()
         
         self.control_init()
-        self.des_dist=-1000
+        self.des_dist=-400
+        
+        self.M1=np.array([[465.24217997,   0.         ,341.98704948],
+                [  0.         ,458.21944784 ,215.39055162],
+                [  0.           ,0.           ,1.        ]])
+        self.M2=np.array([[465.24217997,   0.         ,341.98704948],
+                [  0.         ,458.21944784 ,215.39055162],
+                [  0.           ,0.           ,1.        ]])
+        self.dist1=np.array([[-0.01575441, -0.16604411, -0.00668898,  0.01829878,  0.1655708 ]])
+        self.dist2=np.array([[-0.01575441, -0.16604411, -0.00668898,  0.01829878,  0.1655708 ]])
+        self.R=np.array([[ 1.00000000e+00, -1.19438593e-11,  9.23983516e-12],
+                [ 1.19438593e-11,  1.00000000e+00, -7.68874323e-13],
+                [-9.23983516e-12,  7.68874323e-13,  1.00000000e+00]])
+        self.T=np.array([[-1.46177495e-10],
+                        [ 1.49886332e-11],
+                        [ 9.75874994e-11]])
+
+        self.P1=np.array([
+            [480.14789983   ,0.         ,354.73688889   ,0.        ],
+            [  0.         ,480.14789983, 128.49066401,   0.        ],
+            [  0.,           0.,           1.,           0.        ]])
+        self.P2=np.array([
+            [4.80147900e+02, 0.00000000e+00, 3.54736889e+02, 0.00000000e+00],
+            [0.00000000e+00, 4.80147900e+02, 1.28490664e+02, 7.44211607e+03],
+            [0.00000000e+00, 0.00000000e+00, 1.00000000e+00, 0.00000000e+00]])
+        
+        self.detL.camera_matrix=self.M1
+        self.detR.camera_matrix=self.M2
+        self.detL.dist_coeffs=self.dist1
+        self.detR.dist_coeffs=self.dist2
+        float_formatter = "{:.2f}".format
+        np.set_printoptions(formatter={'float_kind':float_formatter})
+        
+        
         
     def control_init(self):
         g=9.81
@@ -153,6 +206,8 @@ class main(threading.Thread):
         self.K,S,E=control.lqr(self.A,self.B,Q,R)
         self.state_des=np.zeros((12,1))
         self.state=np.zeros((12,1))
+        self.tspan=[]
+        self.throts=[]
     
     def get_control(self):
         u=self.K@(self.state_des-self.state)
@@ -164,7 +219,7 @@ class main(threading.Thread):
         ##roll left 255 right 127
         ##pitch forward 127 backwrad 255
         ##yaw left 255 right 127
-        for i in range(2):
+        for i in range(3):
             if u[i+1]<=0:
                 u[i+1]=abs(u[i+1])
             else:
@@ -180,7 +235,16 @@ class main(threading.Thread):
     [-sin(b),cos(b)*sin(g),cos(b)*cos(g)]
     ])
     
-        
+    def translate_signal(self,sig):
+        t=[sig[0],0,0,0]
+        for i in range(1,4):
+            if sig[i]>128:
+                 t[i]=sig[i]-128
+            else:
+                t[i]=-sig[i]
+        return t
+    
+    
         
     def run(self):
         prev_time=time.monotonic()
@@ -203,33 +267,42 @@ class main(threading.Thread):
                 c=c/cc
                 cv2.circle(imgL,np.int32(c),3,(255,0,0),-1)
                 cv2.circle(imgR,np.int32(c),3,(255,0,0),-1)
-            
-            #ans=cv2.triangulatePoints(projM1,projM2,imgp1,imgp2)
+            pt=None
+            if imgpL is not None and imgpR is not None:
+                if len(imgpL)==16 and len(imgpR)==16:
+                    pts=cv2.triangulatePoints(self.P1,self.P2,imgpL,imgpR)
+                    pts[:3]=pts[:3]/pts[3]
+                    #print(imgpL[0][0],imgpR[0][0],pts.T[0][:3],c)
+                    
+                    pt=np.average(pts,axis=1)
+                    pt_get_time=time.monotonic()
             curr_time=time.monotonic()
             dt=curr_time-prev_time
             prev_time=curr_time
-            state_prev=self.state
+            state_prev=self.state.copy()
             
-            if (tvecL!=[0,0,0]).any():
-                
-                self.state[0]=tvecL[0] #z
-                self.state[1]=(tvecL[0]-state_prev[0])/dt#zd
-                self.state[2]=self.mpu.psi_kf#psi
-                self.state[3]=(self.mpu.psi_kf-state_prev[2])/dt#psid
-                self.state[4]=tvecL[2]#x
-                self.state[5]=(tvecL[2]-state_prev[4])#xd
-                self.state[6]=self.mpu.phi_kf#phi
-                self.state[7]=(self.mpu.phi_kf-state_prev[6])/dt#phid
-                self.state[8]=tvecL[1]#y
-                self.state[9]=(tvecL[1]-state_prev[8])/dt#yd
-                self.state[10]=self.mpu.theta_kf#theta
-                self.state[11]=(self.mpu.theta_kf-state_prev[10])/dt#thetad
+            if pt is not None:
+                if curr_time-pt_get_time>1:
+                    pass
+                else:
+                    self.state[0]=pt[0] #z
+                    self.state[1]=(pt[0]-state_prev[0])/dt#zd
+                    self.state[2]=self.mpu.psi_kf#psi
+                    self.state[3]=(self.mpu.psi_kf-state_prev[2])/dt#psid
+                    self.state[4]=pt[2]#x
+                    self.state[5]=(pt[2]-state_prev[4])#xd
+                    self.state[6]=self.mpu.phi_kf#phi
+                    self.state[7]=(self.mpu.phi_kf-state_prev[6])/dt#phid
+                    self.state[8]=pt[1]#y
+                    self.state[9]=(pt[1]-state_prev[8])/dt#yd
+                    self.state[10]=self.mpu.theta_kf#theta
+                    self.state[11]=(self.mpu.theta_kf-state_prev[10])/dt#thetad
                 
                 self.state_des[0]=0
                 self.state_des[1]=0
                 self.state_des[2]=0
                 self.state_des[3]=0
-                self.state_des[4]=self.des_dist
+                self.state_des[4]=-self.des_dist
                 self.state_des[5]=0
                 self.state_des[6]=0
                 self.state_des[7]=0
@@ -240,15 +313,22 @@ class main(threading.Thread):
                 
             u=self.get_control()
             self.tx.throttle=u[0][0]
-            self.tx.yaw=u[1][0]
-            self.tx.roll=u[2][0]
-            self.tx.pitch=u[3][0]
-            
+            #self.tx.yaw=u[1][0]
+            #self.tx.roll=u[2][0]
+            #self.tx.pitch=u[3][0]
+            self.tspan.append(curr_time)
+            self.throts.append(self.tx.throttle)
             img=np.hstack((imgL,imgR))
-            print(f"\ndt:{dt}\ntvec:{tvecL}\n u:{u.T}\nstate:{self.state.T}\nstate_des:{self.state_des.T}")
+            
+            print(f"\ndt:{dt}\npt:{pt}\n sig:{[self.tx.throttle,self.tx.pitch,self.tx.yaw,self.tx.roll]}\nstate:{self.state.T}\nstate_des:{self.state_des.T}")
             cv2.imshow('img',img)
             if cv2.waitKey(1) & 0xFF==ord('q'):
-                exit(0)
+                cv2.destroyAllWindows()
+                self.capL.release()
+                self.capR.release()
+                with open('pickle.pkl','wb') as f:
+                    pickle.dump([self.tspan,pt,self.state,u],f)
+                exit(1)
 
         
         

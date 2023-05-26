@@ -25,7 +25,7 @@ class StereoCalibration(object):
         self.read_images(self.cal_path)
 
     def read_images(self, cal_path):
-        images_right = glob.glob(cal_path + 'img_left/*.png')
+        images_right = glob.glob(cal_path + 'img_right/*.png')
         images_left = glob.glob(cal_path + 'img_left/*.png')
         images_left.sort()
         images_right.sort()
@@ -52,8 +52,8 @@ class StereoCalibration(object):
                 # Draw and display the corners
                 ret_l = cv2.drawChessboardCorners(img_l, (8, 5),
                                                   corners_l, ret_l)
-                cv2.imshow(images_left[i], img_l)
-                cv2.waitKey(500)
+                #cv2.imshow(images_left[i], img_l)
+                #cv2.waitKey(50)
 
             if ret_r is True:
                 rt = cv2.cornerSubPix(gray_r, corners_r, (11, 11),
@@ -64,14 +64,14 @@ class StereoCalibration(object):
                 ret_r = cv2.drawChessboardCorners(img_r, (8, 5),
                                                   corners_r, ret_r)
 
-            img_shape = gray_l.shape[::-1]
+            self.img_shape = gray_l.shape[::-1]
 
         rt, self.M1, self.d1, self.r1, self.t1 = cv2.calibrateCamera(
-            self.objpoints, self.imgpoints_l, img_shape, None, None)
+            self.objpoints, self.imgpoints_l, self.img_shape, None, None)
         rt, self.M2, self.d2, self.r2, self.t2 = cv2.calibrateCamera(
-            self.objpoints, self.imgpoints_r, img_shape, None, None)
+            self.objpoints, self.imgpoints_r, self.img_shape, None, None)
 
-        self.camera_model = self.stereo_calibrate(img_shape)
+        self.camera_model = self.stereo_calibrate(self.img_shape)
 
     def stereo_calibrate(self, dims):
         flags = 0
@@ -126,8 +126,11 @@ if __name__ == '__main__':
     """parser = argparse.ArgumentParser()
     parser.add_argument('filepath', help='String Filepath')
     args = parser.parse_args()"""
-    cal_data = StereoCalibration('./')
-    with open('data.csv','w') as f:
-        for key in cal_data.camera_model.keys():
-            f.write(f'{key},{cal_data.camera_model[key]}\n')
-        f.close()
+    cal_data = StereoCalibration('')
+    data=cal_data.camera_model
+    R1,R2,P1,P2,Q,_,_=cv2.stereoRectify(data['M1'],data['dist1'],data['M2'],data['dist2'],cal_data.img_shape,data['R'],data['T'])
+    print(R1)
+    print(R2)
+    print(P1)
+    print(P2)
+    print(Q)
