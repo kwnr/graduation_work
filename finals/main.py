@@ -102,6 +102,12 @@ class LowPassFilter(object):
 class main(threading.Thread):
     def __init__(self):
         super().__init__()
+<<<<<<< HEAD
+        
+        self.capL=cv2.VideoCapture(-1)
+        self.capR=cv2.VideoCapture(2)
+=======
+>>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
 
         self.capL = cv2.VideoCapture(0)
         self.capR = cv2.VideoCapture(2)
@@ -191,6 +197,51 @@ class main(threading.Thread):
         np.set_printoptions(formatter={"float_kind": float_formatter})
 
     def control_init(self):
+<<<<<<< HEAD
+        g=9.81
+        m=2
+        Iz=1/2*m*0.1**2
+        Ix=1/12*m*(3*0.1**2+0.1**2)
+        Iy=Ix
+        self.A=np.array([
+            [0,1,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,1,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,0,0,0,0,0,0],
+            [0,0,0,0,0,0,g,0,0,0,0,0],
+            [0,0,0,0,0,0,0,1,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,1,0,0],
+            [0,0,0,0,0,0,0,0,0,0,-g,0],
+            [0,0,0,0,0,0,0,0,0,0,0,1],
+            [0,0,0,0,0,0,0,0,0,0,0,0]
+            ])
+
+        self.B=np.array([
+            [0,0,0,0],
+            [1/m,0,0,0],
+            [0,0,0,0],
+            [0,1/Ix,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,1/Iy,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,1/Iz]
+            ])
+        Q=np.eye(12)
+        R=np.eye(4)
+        self.K,S,E=control.lqr(self.A,self.B,Q,R)
+        self.state_des=np.zeros((12,1))
+        self.state=np.zeros((12,1))
+        self.state[0]=10
+        self.tspan=[]
+        self.throts=[]
+    
+=======
         g = 9.81
         m = 2
         Iz = 1 / 2 * m * 0.1**2
@@ -237,6 +288,7 @@ class main(threading.Thread):
         self.tspan = []
         self.throts = []
 
+>>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
     def get_control(self):
         u = self.K @ (self.state_des - self.state)
         u[0][0] = max(min(u[0][0], 255), 0)
@@ -274,7 +326,21 @@ class main(threading.Thread):
         )
 
     def run(self):
+<<<<<<< HEAD
+        prev_time=time.monotonic()
+        while time.monotonic()-prev_time<5:
+            self.tx.throttle=0
+            self.tx.pitch=255
+            self.tx.roll=127
+            self.tx.yaw=255
+        while time.monotonic()-prev_time<10:
+            self.tx.throttle=130
+            self.tx.pitch=0
+            self.tx.roll=0
+            self.tx.yaw=0
+=======
         prev_time = time.monotonic()
+>>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
         while True:
             rvecL, tvecL, imgL = self.detL.run(draw=True)
             rvecR, tvecR, imgR = self.detR.run(draw=True)
@@ -334,6 +400,13 @@ class main(threading.Thread):
             # self.tx.pitch=u[3][0]
             self.tspan.append(curr_time)
             self.throts.append(self.tx.throttle)
+<<<<<<< HEAD
+            #img=np.hstack((imgL,imgR))
+            
+            print(f"\ndt:{dt}\npt:{pt}\n sig:{[self.tx.throttle,self.tx.pitch,self.tx.yaw,self.tx.roll]}\nstate:{self.state.T}\nstate_des:{self.state_des.T}")
+            #cv2.imshow('img',img)
+            if cv2.waitKey(1) & 0xFF==ord('q'):
+=======
             img = np.hstack((imgL, imgR))
 
             print(
@@ -341,6 +414,7 @@ class main(threading.Thread):
             )
             cv2.imshow("img", img)
             if cv2.waitKey(1) & 0xFF == ord("q"):
+>>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
                 cv2.destroyAllWindows()
                 self.capL.release()
                 self.capR.release()
