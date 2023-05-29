@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import glob
 import argparse
+import pickle
 
 
 class StereoCalibration(object):
@@ -162,8 +163,6 @@ if __name__ == "__main__":
         data["R"],
         data["T"],
     )
-    print(R1)
-    print(R2)
-    print(P1)
-    print(P2)
-    print(Q)
+    data=dict(zip([*data.keys(),"R1","R2","P1","P2","Q"],[*data.values(),R1,R2,P1,P2,Q]))
+    with open('data.pkl','wb') as f:
+        pickle.dump(data,f)

@@ -45,10 +45,14 @@ C=[
 D=zeros(6,4);
 
 sys=ss(A,B,C,D);
-Q=eye(12);
+%x=      z    zd  psi psid    x   xd phi  phid    y   yd  theta   thetad
+acceptable_error_states=[200,10,1,0.1,200,10,1,0.1,200,10,1,0.1];
 
-R=eye(4);
-%K=lqr(sys,Q,R);
+Q=diag(1./(acceptable_error_states.^2));
+
+acceptable_error_input=[30,10,10,10];
+R=diag(1./acceptable_error_input.^2);
+K=lqr(sys,Q,R);
 sys_c=ss(A-B*K,B,C,D);
 
 x=zeros(12,1);
@@ -77,7 +81,7 @@ for t=tspan
     u(3)=max(min(u(3),10),-10);
     u(4)=max(min(u(4),10),-10);
  
-    xd=A*x+B1*u;
+    xd=A*x+B*u;
     
     xd(2)=xd(2)-g;
     x=x+0.01*xd;
