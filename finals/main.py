@@ -23,7 +23,7 @@ class gyro():
         self.kf.H = np.eye(4)
         self.kf.Q = np.eye(4) * 0.0001
         self.kf.R = np.eye(4) * 10
-        self.kf.x = np.array([0, 0, 0, 1]).reshape(4, 1)
+        self.kf.x = np.array([1, 0, 0, 0]).reshape(4, 1)
         self.kf.P = np.eye(4)
 
         self.biasGx = -0.00878016
@@ -39,6 +39,7 @@ class gyro():
 
     def run(self):
         Ax, Ay, Az, Gx, Gy, Gz = self.sensor.read_value()
+        Ax, Ay, Az, Gx, Gy, Gz=np.deg2rad([Ax, Ay, Az, Gx, Gy, Gz])
         self.acc = [Ax, Ay, Az]
         self.ang_rate = [Gx, Gy, Gz]
         self.kf.A = np.eye(4) + self.dt * 1 / 2 * np.array(
@@ -69,11 +70,11 @@ class gyro():
                 [cosphi * costhe * sinpsi - sinphi * sinthe * cospsi],
             ]
         )
-        x = self.kf.run(z)
+        x = self.kf.run(z)#quat, [w,x,y,z]
         self.phi_kf = np.arctan2(
             2 * (x[2] * x[3] + x[0] * x[1]), 1 - 2 * (x[1] ** 2 + x[2] ** 2)
         )
-        self.theta_kf = -np.arcsin(2 * (x[1] * x[3] - x[0] * x[2]))
+        self.theta_kf = np.arcsin(2*(x[0]*x[2]-x[1]*x[3]))
         self.psi_kf = np.arctan2(
             2 * (x[1] * x[2] + x[0] * x[3]), 1 - 2 * (x[2] ** 2 + x[3] ** 2)
         )
@@ -102,15 +103,10 @@ class LowPassFilter(object):
 class main(threading.Thread):
     def __init__(self):
         super().__init__()
-<<<<<<< HEAD
         
         self.capL=cv2.VideoCapture(-1)
         self.capR=cv2.VideoCapture(2)
-=======
->>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
 
-        self.capL = cv2.VideoCapture(0)
-        self.capR = cv2.VideoCapture(2)
 
         w = 640
         h = 480
@@ -143,7 +139,7 @@ class main(threading.Thread):
         self.tx.start()
 
         self.control_init()
-        self.des_dist = -400
+        self.des_dist = 400
 
         self.M1 = np.array(
             [
@@ -195,53 +191,9 @@ class main(threading.Thread):
         self.detR.dist_coeffs = self.dist2
         float_formatter = "{:.2f}".format
         np.set_printoptions(formatter={"float_kind": float_formatter})
-
+        self.u_lpf=[LowPassFilter(1,0.1) for i in range(4)]
+        self.state_lpf=[LowPassFilter(1,0.1) for i in range(12)]
     def control_init(self):
-<<<<<<< HEAD
-        g=9.81
-        m=2
-        Iz=1/2*m*0.1**2
-        Ix=1/12*m*(3*0.1**2+0.1**2)
-        Iy=Ix
-        self.A=np.array([
-            [0,1,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,1,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,1,0,0,0,0,0,0],
-            [0,0,0,0,0,0,g,0,0,0,0,0],
-            [0,0,0,0,0,0,0,1,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,1,0,0],
-            [0,0,0,0,0,0,0,0,0,0,-g,0],
-            [0,0,0,0,0,0,0,0,0,0,0,1],
-            [0,0,0,0,0,0,0,0,0,0,0,0]
-            ])
-
-        self.B=np.array([
-            [0,0,0,0],
-            [1/m,0,0,0],
-            [0,0,0,0],
-            [0,1/Ix,0,0],
-            [0,0,0,0],
-            [0,0,0,0],
-            [0,0,0,0],
-            [0,0,1/Iy,0],
-            [0,0,0,0],
-            [0,0,0,0],
-            [0,0,0,0],
-            [0,0,0,1/Iz]
-            ])
-        Q=np.eye(12)
-        R=np.eye(4)
-        self.K,S,E=control.lqr(self.A,self.B,Q,R)
-        self.state_des=np.zeros((12,1))
-        self.state=np.zeros((12,1))
-        self.state[0]=10
-        self.tspan=[]
-        self.throts=[]
-    
-=======
         g = 9.81
         m = 2
         Iz = 1 / 2 * m * 0.1**2
@@ -280,33 +232,38 @@ class main(threading.Thread):
                 [0, 0, 0, 1 / Iz],
             ]
         )
-        Q = np.eye(12)
-        R = np.eye(4)
+        acceptable_error_states=[10,100,1,1]*3
+        acceptable_error_inputs=[10,10,10,10]
+        Q=np.diag(np.divide(1,np.square(acceptable_error_states)))
+        R = np.diag(np.divide(1,np.square(acceptable_error_inputs)))
         self.K, S, E = control.lqr(self.A, self.B, Q, R)
         self.state_des = np.zeros((12, 1))
         self.state = np.zeros((12, 1))
+        self.state_pre=np.zeros((12,1))
         self.tspan = []
         self.throts = []
 
->>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
-    def get_control(self):
+    def state_feedback(self):
         u = self.K @ (self.state_des - self.state)
         u[0][0] = max(min(u[0][0], 255), 0)
         u[1][0] = max(min(u[1][0], 127), -127)
         u[2][0] = max(min(u[2][0], 127), -127)
-        u[3][0] = max(min(u[2][0], 127), -127)
-
+        u[3][0] = max(min(u[3][0], 127), -127)
+        return u
+    
+    def get_control(self,u):
         ##roll left 255 right 127
         ##pitch forward 127 backwrad 255
         ##yaw left 255 right 127
+        sig=u.copy()
         for i in range(3):
-            if u[i + 1] <= 0:
-                u[i + 1] = abs(u[i + 1])
+            if sig[i + 1] <= 0:
+                sig[i + 1] = abs(sig[i + 1])
             else:
-                u[i + 1] = u[i + 1] + 128
-        u = np.int16(u)
-        u %= 256
-        return u
+                sig[i + 1] = sig[i + 1] + 128
+        sig = np.int16(sig)
+        sig %= 256
+        return sig
 
     def rot(self, a, b, g):
         return np.array(
@@ -326,8 +283,9 @@ class main(threading.Thread):
         )
 
     def run(self):
-<<<<<<< HEAD
         prev_time=time.monotonic()
+        us,states=[],[]
+        states_pre=[]
         while time.monotonic()-prev_time<5:
             self.tx.throttle=0
             self.tx.pitch=255
@@ -338,53 +296,47 @@ class main(threading.Thread):
             self.tx.pitch=0
             self.tx.roll=0
             self.tx.yaw=0
-=======
-        prev_time = time.monotonic()
->>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
         while True:
             rvecL, tvecL, imgL = self.detL.run(draw=True)
             rvecR, tvecR, imgR = self.detR.run(draw=True)
             imgpL = self.detL.imgp
             imgpR = self.detR.imgp
 
-            if self.detL.imgp is not None:
-                M1 = cv2.moments(imgpL)
-                c1 = [M1["m10"] / M1["m00"], M1["m01"] / M1["m00"]]
-            if self.detR.imgp is not None:
-                M2 = cv2.moments(imgpR)
-                c2 = [M2["m10"] / M2["m00"], M2["m01"] / M2["m00"]]
+            c1=tvecL[:2]
+            c2=tvecR[:2]
                 
-            dist=np.sqrt(np.sum(np.square((c1,c2))))
+            dist=np.sqrt((c1[0]-c2[0])**2+(c1[1]-c2[1])**2)
             
             curr_time = time.monotonic()
             dt = curr_time - prev_time
             prev_time = curr_time
-            state_prev = self.state.copy()
+            state_prev = self.state_pre.copy()
             
             self.mpu.dt=dt
             self.mpu.run()
-            psi,theta,phi=self.mpu.psi_kf,self.mpu.theta_kf,self.mpu.phi.kf
+            theta,phi=self.mpu.theta_kf,self.mpu.phi_kf
+            psi=0
 
             if c2 is not None:
 
-                self.state[0] = c1[1]  # z
-                self.state[1] = (c1[1] - state_prev[0]) / dt  # zd
-                self.state[2] = psi  # psi
-                self.state[3] = (psi - state_prev[2]) / dt  # psid
-                self.state[4] = dist  # x
-                self.state[5] = dist - state_prev[4]  # xd
-                self.state[6] = phi  # phi
-                self.state[7] = (phi - state_prev[6]) / dt  # phid
-                self.state[8] = c1[0]  # y
-                self.state[9] = (c1[0] - state_prev[8]) / dt  # yd
-                self.state[10] = theta  # theta
-                self.state[11] = (theta - state_prev[10]) / dt  # thetad
+                self.state_pre[0] = c1[1]  # z
+                self.state_pre[1] = (c1[1] - state_prev[0]) / dt  # zd
+                self.state_pre[2] = psi  # psi
+                self.state_pre[3] = (psi - state_prev[2]) / dt   # psid
+                self.state_pre[4] = dist  # x
+                self.state_pre[5] = dist - state_prev[4]  # xd
+                self.state_pre[6] = phi-rvecL[2]  # phi
+                self.state_pre[7] = (phi - state_prev[6]) / dt  # phid
+                self.state_pre[8] = c1[0]  # y
+                self.state_pre[9] = (c1[0] - state_prev[8]) / dt  # yd
+                self.state_pre[10] = theta-rvecL[0]  # theta
+                self.state_pre[11] = (theta - state_prev[10]) / dt  # thetad
 
                 self.state_des[0] = 0
                 self.state_des[1] = 0
                 self.state_des[2] = 0
                 self.state_des[3] = 0
-                self.state_des[4] = -self.des_dist
+                self.state_des[4] = self.des_dist
                 self.state_des[5] = 0
                 self.state_des[6] = 0
                 self.state_des[7] = 0
@@ -393,33 +345,39 @@ class main(threading.Thread):
                 self.state_des[10] = 0
                 self.state_des[11] = 0
 
-            u = self.get_control()
+            for i in range(12):
+                self.state[i]=self.state_lpf[i].filter(self.state_pre[i])
+            
+            u_raw=self.state_feedback()
+            u = self.get_control(u_raw)
+            
+            
+            
+            u[0][0]=max(u[0][0],10)
+            
             self.tx.throttle = u[0][0]
-            # self.tx.yaw=u[1][0]
-            # self.tx.roll=u[2][0]
-            # self.tx.pitch=u[3][0]
+            self.tx.yaw=u[1][0]
+            self.tx.roll=u[2][0]
+            self.tx.pitch=u[3][0]
             self.tspan.append(curr_time)
             self.throts.append(self.tx.throttle)
-<<<<<<< HEAD
-            #img=np.hstack((imgL,imgR))
-            
-            print(f"\ndt:{dt}\npt:{pt}\n sig:{[self.tx.throttle,self.tx.pitch,self.tx.yaw,self.tx.roll]}\nstate:{self.state.T}\nstate_des:{self.state_des.T}")
-            #cv2.imshow('img',img)
-            if cv2.waitKey(1) & 0xFF==ord('q'):
-=======
-            img = np.hstack((imgL, imgR))
 
             print(
-                f"\ndt:{dt}\npt:{c1}\n sig:{[self.tx.throttle,self.tx.pitch,self.tx.yaw,self.tx.roll]}\nstate:{self.state.T}\nstate_des:{self.state_des.T}"
-            )
+                f"\ndt:{dt}\npt:{c1.T}\nthrottle:{u_raw[0][0]},    pitch:{u_raw[1][0]},  yaw:{u_raw[2][0]},  roll:{u_raw[3][0]}"
+                )
+            print(dict(zip(["z","zd",  "psi", "psid",    "x",   "xd", "phi",  "phid",    "y",   "yd",  "theta",   "thetad"],*self.state.T)))
+            states.append(self.state)
+            states_pre.append(self.state_pre)
+            us.append(u)
+            img = np.hstack((imgL, imgR))
             cv2.imshow("img", img)
             if cv2.waitKey(1) & 0xFF == ord("q"):
->>>>>>> e140e2d2482c2cb00e452003a3b8f28e49903bd0
                 cv2.destroyAllWindows()
                 self.capL.release()
                 self.capR.release()
                 with open("pickle.pkl", "wb") as f:
-                    pickle.dump([self.tspan, self.state, u], f)
+                    pickle.dump([self.tspan, states,states_pre, us], f)
+                print('pkl writed')
                 exit(1)
 
 

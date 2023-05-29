@@ -12,8 +12,8 @@ class Detector:
             [2, 2], 100, 20, self.aruco_dict, ids=np.array([1, 11, 21, 31])
         )
         self.cap = cap
-        self.rvec = np.array([0, 0, 0])
-        self.tvec = np.array([0, 0, 0])
+        self.rvec = np.array([[0], [0], [0]])
+        self.tvec = np.array([[0], [0], [0]])
 
     def set_cap_frame_size(self, w, h):
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, w)
@@ -59,10 +59,19 @@ class Detector:
                 )
                 cv2.putText(
                     img,
-                    f"{self.rvec}, {self.tvec}",
+                    f"{self.tvec}",
                     (0, 50),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    2,
+                    0.5,
+                    (0, 0, 0),
+                    1,
+                )
+                cv2.putText(
+                    img,
+                    f"{self.rvec}",
+                    (0, 100),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
                     (0, 0, 0),
                     1,
                 )

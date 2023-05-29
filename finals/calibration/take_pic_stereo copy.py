@@ -23,8 +23,9 @@ with open("data.pkl",'rb') as f:
 while True:
     if capL.isOpened():
         _, imgL = capL.read()
-        imgR=cv2.undistort(imgL,data['M1'],data['dist1'])
         imgL = cv2.rotate(imgL, cv2.ROTATE_180)
+
+        imgR=cv2.undistort(imgL,data['M1'],data['dist1'])
         grayL = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
         grayR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
         retL, cornersL = cv2.findChessboardCorners(
