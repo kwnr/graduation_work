@@ -141,49 +141,18 @@ class main(threading.Thread):
         self.control_init()
         self.des_dist = 400
 
-        self.M1 = np.array(
-            [
-                [465.24217997, 0.0, 341.98704948],
-                [0.0, 458.21944784, 215.39055162],
-                [0.0, 0.0, 1.0],
-            ]
-        )
-        self.M2 = np.array(
-            [
-                [465.24217997, 0.0, 341.98704948],
-                [0.0, 458.21944784, 215.39055162],
-                [0.0, 0.0, 1.0],
-            ]
-        )
-        self.dist1 = np.array(
-            [[-0.01575441, -0.16604411, -0.00668898, 0.01829878, 0.1655708]]
-        )
-        self.dist2 = np.array(
-            [[-0.01575441, -0.16604411, -0.00668898, 0.01829878, 0.1655708]]
-        )
-        self.R = np.array(
-            [
-                [1.00000000e00, -1.19438593e-11, 9.23983516e-12],
-                [1.19438593e-11, 1.00000000e00, -7.68874323e-13],
-                [-9.23983516e-12, 7.68874323e-13, 1.00000000e00],
-            ]
-        )
-        self.T = np.array([[-1.46177495e-10], [1.49886332e-11], [9.75874994e-11]])
-
-        self.P1 = np.array(
-            [
-                [480.14789983, 0.0, 354.73688889, 0.0],
-                [0.0, 480.14789983, 128.49066401, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-            ]
-        )
-        self.P2 = np.array(
-            [
-                [4.80147900e02, 0.00000000e00, 3.54736889e02, 0.00000000e00],
-                [0.00000000e00, 4.80147900e02, 1.28490664e02, 7.44211607e03],
-                [0.00000000e00, 0.00000000e00, 1.00000000e00, 0.00000000e00],
-            ]
-        )
+        with open('data.pkl','rb') as f:
+            data=pickle.load(f)
+        self.M1=data['M1']
+        self.M2=data['M2']
+        self.P1=data['P1']
+        self.P2=data['P2']
+        self.dist1=data['dist1']
+        self.dist2=data['dist2']
+        self.R1=data['R1']
+        self.R2=data['R2']
+        self.R=data['R']
+        self.T=data['T']
 
         self.detL.camera_matrix = self.M1
         self.detR.camera_matrix = self.M2
@@ -191,8 +160,16 @@ class main(threading.Thread):
         self.detR.dist_coeffs = self.dist2
         float_formatter = "{:.2f}".format
         np.set_printoptions(formatter={"float_kind": float_formatter})
-        self.u_lpf=[LowPassFilter(1,0.1) for i in range(4)]
-        self.state_lpf=[LowPassFilter(1,0.1) for i in range(12)]
+        self.u0_lpf=LowPassFilter(1,0.1)
+        self.u1_lpf=LowPassFilter(1,0.1)
+        self.u2_lpf=LowPassFilter(1,0.1)
+        self.u3_lpf=LowPassFilter(1,0.1)
+        self.state0_lpf=LowPassFilter(1,0.1)
+        self.state2_lpf=LowPassFilter(1,0.1)
+        self.state4_lpf=LowPassFilter(1,0.1)
+        self.state6_lpf=LowPassFilter(1,0.1)
+        self.state8_lpf=LowPassFilter(1,0.1)
+        self.state10_lpf=LowPassFilter(1,0.1)
     def control_init(self):
         g = 9.81
         m = 2
@@ -286,6 +263,9 @@ class main(threading.Thread):
         prev_time=time.monotonic()
         us,states=[],[]
         states_pre=[]
+        dist=self.des_dist
+        v1=np.array([0,0,1])
+        cam_dist=300
         while time.monotonic()-prev_time<5:
             self.tx.throttle=0
             self.tx.pitch=255
@@ -297,15 +277,23 @@ class main(threading.Thread):
             self.tx.roll=0
             self.tx.yaw=0
         while True:
-            rvecL, tvecL, imgL = self.detL.run(draw=True)
-            rvecR, tvecR, imgR = self.detR.run(draw=True)
+            rvecL, tvecL, imgL, resL = self.detL.run(draw=True)
+            rvecR, tvecR, imgR, resR = self.detR.run(draw=True)
             imgpL = self.detL.imgp
             imgpR = self.detR.imgp
 
             c1=tvecL[:2]
             c2=tvecR[:2]
-                
-            dist=np.sqrt((c1[0]-c2[0])**2+(c1[1]-c2[1])**2)
+
+            if resL and resR:
+                cd1=self.M1@tvecL
+                cd2=self.M2@self.R@tvecR
+                ang1=np.arccos((cd1.T@v1)/(np.linalg.norm(cd1)*np.linalg.norm(v1)))
+                ang2=np.arccos((cd2.T@v1)/(np.linalg.norm(cd2)*np.linalg.norm(v1)))
+                gamma=np.pi-ang1-ang2
+                dist_v=cam_dist*np.sin(ang2)/np.sin(gamma)*np.sin(ang1)
+                dist_off=cam_dist/2-cam_dist*np.sin(ang2)/np.sin(gamma)
+                dist=np.sqrt(dist_v**2+dist_off**2)
             
             curr_time = time.monotonic()
             dt = curr_time - prev_time
@@ -321,7 +309,7 @@ class main(threading.Thread):
 
                 self.state_pre[0] = c1[1]  # z
                 self.state_pre[1] = (c1[1] - state_prev[0]) / dt  # zd
-                self.state_pre[2] = psi  # psi
+                self.state_pre[2] = psi-rvecL[1]  # psi
                 self.state_pre[3] = (psi - state_prev[2]) / dt   # psid
                 self.state_pre[4] = dist  # x
                 self.state_pre[5] = dist - state_prev[4]  # xd
@@ -345,8 +333,12 @@ class main(threading.Thread):
                 self.state_des[10] = 0
                 self.state_des[11] = 0
 
-            for i in range(12):
-                self.state[i]=self.state_lpf[i].filter(self.state_pre[i])
+            self.state[0]=self.state0_lpf.filter(self.state_pre[0])
+            self.state[2]=self.state2_lpf.filter(self.state_pre[2])
+            self.state[4]=self.state4_lpf.filter(self.state_pre[4])
+            self.state[6]=self.state6_lpf.filter(self.state_pre[6])
+            self.state[8]=self.state8_lpf.filter(self.state_pre[8])
+            self.state[10]=self.state10_lpf.filter(self.state_pre[10])
             
             u_raw=self.state_feedback()
             u = self.get_control(u_raw)
@@ -366,11 +358,12 @@ class main(threading.Thread):
                 f"\ndt:{dt}\npt:{c1.T}\nthrottle:{u_raw[0][0]},    pitch:{u_raw[1][0]},  yaw:{u_raw[2][0]},  roll:{u_raw[3][0]}"
                 )
             print(dict(zip(["z","zd",  "psi", "psid",    "x",   "xd", "phi",  "phid",    "y",   "yd",  "theta",   "thetad"],*self.state.T)))
+            print(f'dist: {dist}')
             states.append(self.state)
             states_pre.append(self.state_pre)
             us.append(u)
-            img = np.hstack((imgL, imgR))
-            cv2.imshow("img", img)
+            #img = np.hstack((imgL, imgR))
+            #cv2.imshow("img", img)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 cv2.destroyAllWindows()
                 self.capL.release()

@@ -50,7 +50,9 @@ class Detector:
         img = cv2.rotate(img, cv2.ROTATE_180)
         img = self.preprocessing(img)
         self.objp, self.imgp = self.detect_match_marker(img)
+        res=False
         if self.objp is not None:
+            res=True
             self.rvec, self.tvec = self.solve_pnp(self.objp, self.imgp)
             if draw:
                 cv2.aruco.drawDetectedMarkers(img, self.corners, self.ids)
@@ -76,4 +78,4 @@ class Detector:
                     1,
                 )
 
-        return self.rvec, self.tvec, img
+        return self.rvec, self.tvec, img,res
