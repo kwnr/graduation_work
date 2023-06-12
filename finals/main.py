@@ -348,9 +348,9 @@ class main(threading.Thread):
             u[0][0]=max(u[0][0],10)
             
             self.tx.throttle = u[0][0]
-            self.tx.yaw=u[1][0]
-            self.tx.roll=u[2][0]
-            self.tx.pitch=u[3][0]
+            self.tx.roll=u[1][0]
+            self.tx.pitch=u[2][0]
+            self.tx.yaw=u[3][0]
             self.tspan.append(curr_time)
             self.throts.append(self.tx.throttle)
 
